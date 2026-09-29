@@ -1,0 +1,14 @@
+{
+  "include": ["backend", "scripts"],
+  "extraPaths": ["backend"],
+  "exclude": [
+    "**/.venv/**",
+    "**/__pycache__/**",
+    "**/migrations/**",
+    "backend/staticfiles"
+  ],
+  "reportMissingTypeStubs": false,
+  "reportMissingModuleSource": false,
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic"
+}

@@ -1,0 +1,33 @@
+# Секреты и локальное окружение
+.env
+.venv/
+venv/
+
+# База данных — переносится копированием файла
+*.sqlite3
+db.sqlite3
+
+# Собранная статика (исходники в static/)
+staticfiles/
+
+# Загруженные файлы: в MVP загрузок нет, каталог на будущее
+media/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Редакторы
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+
+# macOS: .DS_Store, теневые копии и служебные файлы ресурсов рядом с документами
+.DS_Store
+__MACOSX/
+._*

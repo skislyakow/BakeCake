@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
 from django.db.backends.signals import connection_created
 from dotenv import load_dotenv
 
@@ -8,8 +9,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(BASE_DIR.parent / ".env")
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "dev-insecure-key-change-me-in-production")
+DEV_SECRET_KEY = "dev-insecure-key-change-me-in-production"
+SECRET_KEY = os.environ.get("SECRET_KEY", DEV_SECRET_KEY)
 DEBUG = os.environ.get("DEBUG", "1") == "1"
+
+if not DEBUG and SECRET_KEY == DEV_SECRET_KEY:
+    raise ImproperlyConfigured(
+        "SECRET_KEY is not set: fill it in .env before running with DEBUG=0. "
+        "Generate with: python -c \"from django.core.management.utils import "
+        "get_random_secret_key; print(get_random_secret_key())\""
+    )
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
@@ -83,6 +92,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 SESSION_COOKIE_SAMESITE = "Lax"
 CSRF_COOKIE_SAMESITE = "Lax"
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",

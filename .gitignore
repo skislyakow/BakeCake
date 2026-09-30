@@ -6,6 +6,9 @@ venv/
 # База данных — переносится копированием файла
 *.sqlite3
 db.sqlite3
+# WAL включён (settings.py), служебные файлы SQLite образуют базу вместе с ней
+*.sqlite3-wal
+*.sqlite3-shm
 
 # Собранная статика (исходники в static/)
 staticfiles/

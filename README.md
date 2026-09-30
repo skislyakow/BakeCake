@@ -53,8 +53,7 @@ python manage.py runserver
 - **входа по телефону** — `POST /api/auth/login/` отвечает `{"ok": true}`, но
   пользователя не создаёт и сессию не открывает. Это задача 6;
 - **витрины, конструктора и личного кабинета** — `templates/` и `static/` пока
-  содержат только `.gitkeep`. Это задача 4;
-- **деплоя** — каталог `deploy/` пуст, сервер поднимается на шаге 5.
+  содержат только `.gitkeep`. Это задача 4.
 
 ## Настройки через `.env`
 
@@ -145,6 +144,7 @@ PLAN.md                 план и все решения — первоисто
 README.md               этот файл
 requirements.txt        Django 5, DRF, python-dotenv
 requirements-dev.txt    django-stubs, pyright — только проверка типов
+requirements-server.txt gunicorn — только для сервера, подтягивает requirements.txt
 pyrightconfig.json      настройки проверки типов
 .env.example            шаблон настроек, в git попадает
 .env                    локальные настройки, в git не попадает
@@ -163,7 +163,14 @@ backend/
 ├── templates/        — Б, пока пусто (.gitkeep)
 └── static/           — Б, пока пусто (.gitkeep)
 scripts/seed_demo.py
-deploy/               — В, появится на шаге 5
+deploy/
+├── install.sh                  подъём сервера с нуля, один раз
+├── deploy.sh                   pull, бэкап, миграции, статика, seed, рестарт
+├── auto-deploy.sh              проверка «есть ли новый коммит в main»
+├── bakecake.service            gunicorn на 127.0.0.1:8004
+├── bakecake-autodeploy.service  вызывает auto-deploy.sh
+├── bakecake-autodeploy.timer    каждые 3 минуты
+└── nginx.conf                  конфиг сайта, certbot дописывает HTTPS
 ```
 
 ## Git
@@ -193,8 +200,57 @@ git branch -d step-02-...
 
 ## Деплой
 
-Сервер поднимает В скриптом `deploy/install.sh` (шаг 5 конвейера) — до этого шага
-каталог `deploy/` пуст, скриптов в репозитории ещё нет. Дальше деплой
-автоматический: cron на сервере проверяет `main` каждые 3 минуты и, если есть новый
-коммит, выполняет `deploy/deploy.sh` — pull, бэкап БД, миграции, статика, seed, SSL,
-рестарт gunicorn. Подробности — в `PLAN.md`, раздел 12.
+Сервер — `kislyakov84.fvds.ru` (`ssh vds`), Ubuntu 24.04, домен
+`https://bakecake.kislyakov.pro/`. Код лежит в `/opt/bakecake`, наружу отдаётся
+nginx, gunicorn слушает только `127.0.0.1:8004` и недоступен из интернета.
+
+Подъём с нуля, один раз:
+
+```bash
+ssh vds 'git clone https://github.com/skislyakow/BakeCake.git /opt/bakecake && /opt/bakecake/deploy/install.sh'
+```
+
+`install.sh` создаёт venv, генерирует `/opt/bakecake/.env` (`DEBUG=0`,
+`ALLOWED_HOSTS=bakecake.kislyakov.pro`, свежий `SECRET_KEY`), ставит три
+systemd-юнита, публикует nginx-конфиг, выпускает сертификат certbot и включает
+таймер. Повторный запуск безопасен: существующий `.env` не перезаписывается, а
+уже выпущенный сертификат продлевается, а не запрашивается заново.
+
+Дальше деплой автоматический. `bakecake-autodeploy.timer` срабатывает каждые
+3 минуты, `auto-deploy.sh` сверяет локальный `HEAD` с `origin/main` и при расхождении
+запускает `deploy/deploy.sh`:
+
+| Шаг | Что делается |
+|---|---|
+| бэкап БД | `sqlite3.backup()` в `/opt/backups/db-<дата>.sqlite3` |
+| код | `git pull --ff-only origin main` |
+| зависимости | `pip install -r requirements-server.txt` |
+| статика | `collectstatic --noinput` |
+| БД | `migrate --noinput` |
+| демо-данные | `scripts/seed_demo.py` |
+| сервис | `systemctl restart bakecake` |
+
+Бэкап делается не `cp`, а через `sqlite3.backup()`: включён WAL, и при копировании
+живого файла часть подтверждённых данных может остаться в `-wal` и не попасть в
+копию. Старые копии не удаляются — чистить `/opt/backups` стоит руками.
+
+Форс-деплой текущего `main`, не дожидаясь таймера:
+
+```bash
+ssh vds 'cd /opt/bakecake && deploy/deploy.sh'
+```
+
+Где смотреть:
+
+```bash
+systemctl list-timers bakecake-autodeploy.timer   # расписание
+journalctl -u bakecake-autodeploy.service -n 50   # что решила проверка
+tail -f /var/log/bakecake/deploy.log              # сам деплой
+tail -f /var/log/bakecake/error.log               # gunicorn
+```
+
+Сертификат продлевает системный `certbot-renewal.timer` раз в неделю, поэтому в
+`deploy.sh` certbot не вызывается. Откат: `git -C /opt/bakecake checkout <commit>`,
+затем `deploy/deploy.sh`.
+
+Обоснование решений и параметры бокса — в `PLAN.md`, раздел 12.

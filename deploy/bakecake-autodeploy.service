@@ -1,0 +1,13 @@
+[Unit]
+Description=BakeCake autodeploy check from main
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/bakecake
+EnvironmentFile=/opt/bakecake/.env
+ExecStart=/opt/bakecake/deploy/auto-deploy.sh
+StandardOutput=append:/var/log/bakecake/deploy.log
+StandardError=append:/var/log/bakecake/deploy.log

@@ -925,77 +925,183 @@ GET /api/admin/export/stats.csv
 ## 12. Деплой на FirstVDS
 
 **Владелец деплоя — В (DevOps).** Деплой автоматический и запускается **при каждом
-пуше в `main`** — cron на сервере следит за `main`: новый коммит → `deploy.sh`. Не А: у А
-и так весь бэкенд. Если деплой сломался — чинит А. Несделанный деплой не ждут: сайт просто
-отстаёт на один коммит.
+пуше в `main`**: таймер на сервере проверяет `main`, новый коммит → `deploy.sh`.
+Не А: у А и так весь бекенд. Если деплой сломался — чинит А. Несделанный деплой
+не ждут: сайт просто отстаёт на один коммит.
 
 > **Деплой не начинается первым шагом.** Шаг 1 — только локально, сервер поднимается
-> на шаге 5 (`install.sh` один раз, к вечеру вторника). До этого момента cron на
-> сервере не существует, пуши в `main` просто копятся в репозитории.
+> на шаге 5 (`install.sh` один раз). До этого момента автодеплоя на сервере нет,
+> пуши в `main` просто копятся в репозитории.
 
-`deploy/install.sh` — подъём с нуля, выполняется **один раз** в первый день, чтобы
-к вечеру вторника был готовый сервер:
+### Что есть на сервере (замерено 30.09.2026, не взято из этого плана)
 
-```
-apt install nginx python3-venv python3-pip certbot python3-certbot-nginx
-git clone <repo> /opt/bakecake
-python3 -m venv /opt/bakecake/.venv
-cp .env.example .env            # SECRET_KEY и домен
-certbot --nginx -d bakecake.ru
-crontab -l | { cat; echo "*/3 * * * * /opt/bakecake/deploy/auto-deploy.sh"; } | crontab -
-```
+Раздел изначально описывал сервер по предположению и в шести местах разошёлся с
+реальностью. Параметры ниже — из обследования бокса, а не из пожеланий.
 
-БД — это файл `/opt/bakecake/backend/db.sqlite3`. Никаких сервисов БД, никаких
-пользователей, никакого `CREATE DATABASE`.
+| Что | Значение | Откуда известно |
+|---|---|---|
+| ОС | Ubuntu 24.04.4 LTS | `lsb_release` |
+| Ядер | **1** | `nproc` |
+| RAM | 1.8 ГБ, доступно ~740 МБ | `free -h` |
+| Подкачка | zram 899 МБ, занято ~596 МБ | `swapon --show` |
+| Диск | 40 ГБ, свободно 6.6 ГБ | `df -h /` |
+| Занятые порты | 8000 `kislyakov.pro`, 8001 `beauty`, 8002 `star-burger`, 8003 `selfstorage` | `ss -ltnp` |
+| **Свободный порт** | **8004** | `ss -ltnp` |
+| `default_server` на :80 | `dossier` | `grep -rn default_server /etc/nginx/sites-enabled` |
+| SSL | по сертификату на поддомен, wildcard нет | `/etc/letsencrypt/live/` |
+| Продление SSL | `certbot-renewal.timer`, раз в неделю | `systemctl list-timers` |
+| **cron** | **не установлен** | `systemctl is-enabled cron` → `not-found` |
+| Репозитории соседей | публичные, клон по HTTPS без авторизации | `git ls-remote` от root |
+| Уже установлено | nginx, python3-venv, python3-pip, certbot, python3-certbot-nginx | `dpkg -s` |
+| SQLite CLI | **нет**, но модуль `sqlite3` 3.45.1 есть | `python3 -c "import sqlite3"` |
 
-`deploy/auto-deploy.sh` — проверка каждые 3 минуты, работает без человека:
+Отсюда пять решений, которые нельзя вывести из этого плана без обследования:
+
+1. **Порт 8004, а не 8000.** Порт из ранней редакции этого раздела занят главным
+   сайтом `kislyakov.pro`. Перезапуск соседа недопустим.
+2. **Два gunicorn-воркера, а не три.** Одно ядро не даёт выигрыша от третьего
+   процесса, а свободной RAM ~740 МБ, и на всём боксе уже едят 381 МБ.
+3. **Таймер systemd, а не cron.** Cron на боксе не установлен, и cron-строка
+   самого пакета certbot содержит `test ! -d /run/systemd/system` — то есть под
+   systemd она всё равно не исполняется. Периодику соседей смотрят
+   `starburger-clearsessions.timer` и `selfstorage-notify.timer`: сделано так же.
+4. **Бэкап через `sqlite3.backup()`, а не `cp`.** WAL включён в `settings.py`, при
+   копировании живого файла часть подтверждённых данных может не попасть в копию.
+   Ранняя редакция обещала бэкап, которого в реальности не делал ни один деплой
+   соседей, — отсюда и несуществующий `/opt/backups`.
+5. **`EnvironmentFile=`, а не `Environment=`.** У соседа `dossier.service` ключ
+   записан прямо в юните без кавычек, и systemd не может его разобрать: в значении
+   есть `*`, `^`, `%`, `$`, `(`, `#`. Итог — `DJANGO_SECRET_KEY` для `dossier` не
+   задаётся вообще. У нас ключ живёт в `.env` и закавычен, как у двух здоровых
+   соседей.
+
+### Подъём сервера
+
+`deploy/install.sh` — один раз, в первый день шага 5. Идемпотентен: пакеты
+доустанавливаются только если их нет, существующий `.env` не перезаписывается,
+уже выпущенный сертификат продлевается, а не запрашивается заново. Порядок важен:
+сначала сервис, потом nginx, потом certbot — HTTP-01 проверяется уже на живом
+vhost, и `/opt/backups` с `/var/log/bakecake` создаются до первого деплоя, иначе
+`cp` и открытие лог-файла gunicorn'ом падают на пустом месте.
+
+`.env` **не создаётся копированием `.env.example`** — в шаблоне `DEBUG=1` и
+`ALLOWED_HOSTS=localhost`, такой файл даёт `400` на публичном домене и утечку
+traceback. `install.sh` генерирует ключ и пишет домен сам.
+
+### Деплой одной командой
+
+`deploy/deploy.sh` — то, что зовёт и таймер, и человек:
 
 ```bash
 cd /opt/bakecake
-git fetch --quiet origin main
-if [ "$(git rev-parse @)" != "$(git rev-parse @{u})" ]; then
-  deploy/deploy.sh          # новое в main — pull, migrate, статика, seed, SSL, бэкап, restart
-fi
-```
+BACKUP="/opt/backups/db-$(date +%F-%H%M%S).sqlite3"
+.venv/bin/python - "$BACKUP" <<'PY'
+import sqlite3
+import sys
 
-`deploy/deploy.sh` — деплой одной командой:
-
-```bash
-cd /opt/bakecake
-git pull origin main
-cp backend/db.sqlite3 /opt/backups/db-$(date +%F-%H%M).sqlite3   # бэкап до миграций
-source /opt/bakecake/.venv/bin/activate
-pip install -r requirements.txt
+source = sqlite3.connect("/opt/bakecake/backend/db.sqlite3")
+target = sqlite3.connect(sys.argv[1])
+source.backup(target)
+PY
+git pull --ff-only origin main
+.venv/bin/pip install -q -r requirements-server.txt
 cd /opt/bakecake/backend
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
-python ../scripts/seed_demo.py         # идемпотентно: обновляет демо под текущие модели
-certbot renew --quiet
-systemctl restart bakecake             # systemd-юнит на gunicorn
+../.venv/bin/python manage.py collectstatic --noinput
+../.venv/bin/python manage.py migrate --noinput
+../.venv/bin/python ../scripts/seed_demo.py
+systemctl restart bakecake
 ```
 
-> **Два места, на которых спотыкается скрипт.** `manage.py` лежит в `backend/`, поэтому
-> перед `migrate` обязателен `cd /opt/bakecake/backend`. И `seed_demo.py` — **не**
-> management-команда: он лежит в `scripts/`, вне приложений, поэтому вызывается как
-> `python ../scripts/seed_demo.py`, а не `python manage.py seed_demo`. Проверяется
-> только на сервере, поэтому деплой не должен доезжать до сломанной строки второй раз.
+Отличия от `~/deploy_star_burger.sh` — соседского рабочего деплоя, с которого
+взяты порядок шагов, запуск venv бинарниками напрямую (без `source activate`) и
+короткое имя юнита в `systemctl restart`:
+
+- `git pull --ff-only origin main` вместо голого `git pull`;
+- `requirements-server.txt` вместо `requirements.txt` — gunicorn не нужен на
+  локальной машине;
+- бэкап БД, которого у соседа нет;
+- **certbot в деплой не входит**: сертификат продлевает `certbot-renewal.timer`,
+  звать `certbot renew` на каждом пуше — лишняя сетевая зависимость;
+- `seed_demo` не выкидывается, как в соседском скрипте, потому что у нас в БД
+  только она.
+
+> **Два места, на которых спотыкается скрипт.** `manage.py` лежит в `backend/`,
+> поэтому перед `migrate` обязателен `cd /opt/bakecake/backend`. И `seed_demo.py` —
+> **не** management-команда: он лежит в `scripts/`, вне приложений, поэтому
+> вызывается как `python ../scripts/seed_demo.py`, а не `python manage.py seed_demo`.
+> Проверяется только на сервере, поэтому деплой не должен доезжать до сломанной
+> строки второй раз.
 
 **`seed_demo` идемпотентный.** При каждом деплое `update_or_create` для демо-каталога,
 цен, промокода и демо-заказов/визитов — приводятся к текущим моделям. Реальные заказы
 и оплаты клиента **не трогаются** и не удаляются, `seed_demo` можно безопасно запускать
-на боевой базе под каждым пушем.
+на боевой базе под каждым пушем. Пароль существующего админа сид тоже не сбрасывает —
+иначе пароль на сервере менялся бы на каждую рассылку.
+
+### Проверка нового коммита
+
+`deploy/auto-deploy.sh` — его зовёт таймер. Ничего не деплоит само, только
+сверяет и передаёт управление:
+
+```bash
+cd /opt/bakecake
+git fetch --quiet origin main
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+  /opt/bakecake/deploy/deploy.sh
+fi
+```
+
+Сравнение именно с `origin/main`, а не `@` против `@{u}`: при расхождении
+ветки последняя проверка всегда даёт «есть изменения», и таймер деплоит
+бесконечно. Форс-деплой текущего состояния без нового коммита — `deploy.sh`
+руками, он не проверяет ничего.
+
+### Таймер
+
+`bakecake-autodeploy.timer` + `bakecake-autodeploy.service` — по образцу
+`selfstorage-notify`, тот же интервал в 3 минуты. `Persistent=true` из соседских
+юнитов **не переносится**: он работает только с `OnCalendar`, а здесь
+`OnUnitActiveSec`, поэтому ставятся `OnBootSec` и `AccuracySec`. Вывод сервиса
+идёт в `/var/log/bakecake/deploy.log` через `StandardOutput=append:` — так же,
+как у соседа, а не в syslog.
+
+### nginx
+
+`deploy/nginx.conf` содержит **только HTTP**. Второй vhost с `return 301` и
+`return 404` на :80, а также `listen 443 ssl` и пути к сертификату дописывает
+`certbot --nginx` сам — ровно как в трёх соседних конфигах. `default_server`
+не объявляется: его держит `dossier`, и перехват чужого умолчания сломал бы
+главный сайт.
+
+Блок `location /media/` у соседа есть, у нас его нет и не будет: в `settings.py`
+нет ни `MEDIA_ROOT`, ни `MEDIA_URL`, загруженных файлов в MVP не предусмотрено.
+`alias` ведёт на `/opt/bakecake/backend/staticfiles/`, а не на
+`/opt/bakecake/staticfiles/` как у соседа, потому что у нас `BASE_DIR` — это
+`backend/`.
+
+`proxy_set_header X-Forwarded-Proto $scheme` в конфиге есть, и именно поэтому в
+`settings.py` обязателен `SECURE_PROXY_SSL_HEADER`: без него Django считает схему
+`http`, ждёт `Origin: http://bakecake.kislyakov.pro`, а браузер шлёт `https://`,
+и **любой POST, включая форму входа в админку, падает с 403 CSRF**. Ни один
+сосед этого не настроил — у них просто нет POST-форм под HTTPS, поэтому проблема
+не всплывала.
+
+### Сводка
 
 | Что | Где |
 |---|---|
-| gunicorn | systemd-юнит `deploy/bakecake.service`, 3 воркера, `127.0.0.1:8000` |
-| nginx | `deploy/nginx.conf` — прокси на gunicorn, раздача `/static/`, редирект на HTTPS |
-| БД | файл `backend/db.sqlite3`, в `.gitignore` |
-| Секреты | `/opt/bakecake/.env`, в git **не** попадает, в репозитории только `.env.example` |
-| Бэкап | `cp db.sqlite3 /opt/backups/db-$(date +%F-%H%M).sqlite3` в cron каждую ночь |
-| Откат | `git log` + `git checkout <commit>` + `deploy.sh` |
+| gunicorn | `deploy/bakecake.service`, 2 воркера, `127.0.0.1:8004` |
+| nginx | `deploy/nginx.conf` — прокси на gunicorn, раздача `/static/`, HTTPS дописывает certbot |
+| Таймер | `deploy/bakecake-autodeploy.timer`, каждые 3 минуты |
+| БД | файл `/opt/bakecake/backend/db.sqlite3`, WAL, в `.gitignore` вместе с `-wal` и `-shm` |
+| Секреты | `/opt/bakecake/.env`, права `600`, в git **не** попадает |
+| Бэкап | `sqlite3.backup()` в `/opt/backups/db-<дата>.sqlite3` перед каждой миграцией |
+| Логи | `/var/log/bakecake/{access,error,deploy}.log` |
+| SSL | сертификат на поддомен, продление `certbot-renewal.timer` |
+| Откат | `git checkout <commit>` + `deploy/deploy.sh` |
 
-Готовый сервер нужен **к вечеру вторника** — чтобы А уже на первом рабочем дне положил
-реальные миграции и seed-данные на боевой сервер, а не «где-то на середине недели».
+Сайт на этом шаге отвечает заглушкой: `/` отдаёт `302` на `/admin/`, 19 методов
+API отвечают `{"ok": true, ...}`. Витрины нет — она задача 4.
 
 ---
 
@@ -1265,3 +1371,6 @@ systemctl restart bakecake             # systemd-юнит на gunicorn
 | 28.09.2026 | **Интервалы доставки убраны полностью — свободный ввод.** Вместо списка слотов оставляем поля из макета (`<input type="date">`/`time`, `index.html:308-309,378-379`) с `min`/`max`. Модель `TimeSlot`, приложение `delivery/`, `GET /api/slots/` и снапшот `slot_label` удалены. Осталось только подтверждённое источниками: окно 10:00–23:00 (`index.html:170`), срочность <24 ч. +20% с пометкой `is_rush` в БД (`index.html:155-156`, п. 9 ТЗ). Правило «приём до 20:00» выведено из роли «время доставки» и убрано |
 | 28.09.2026 | **Значок корзины в шапке остаётся как в макете** — нерабочий, корзины в проекте нет. Бейджи-счётчики скрыты везде (на главной они скрыты, в ЛК видны). Цены «Итого» в `lk-order.html` идут с сервера, строка заказа ведёт на `/order/<number>/` (`.lk__order` уже кликабельна) |
 | 28.09.2026 | **Расхождение цен в `index.js`:** в прототипе Форма = Круг +600 / Квадрат +400, по ТЗ наоборот (Квадрат +600, Круг +400). Цены берём из раздела 3 (1:1 из ТЗ), предупреждение добавлено в раздел 2.1 |
+| 30.09.2026 | **Шаг 5: сервер поднят по фактам обследования, раздел 12 переписан.** Раздел описывал сервер по предположению и разошёлся с боксом в шести местах: домен `bakecake.ru` вместо поддомена, порт **8000** (занят главным `kislyakov.pro`), 3 gunicorn-воркера при **одном** ядре, `apt install` без `-y`, `cp db.sqlite3` как бэкап при включённом WAL, сравнение `@`/`@{u}` вместо `origin/main`, `certbot renew` внутри каждого деплоя при работающем `certbot-renewal.timer`, `.env` «копированием шаблона» с `DEBUG=1` и `ALLOWED_HOSTS=localhost`. Отдельно: **cron на сервере не установлен** (`systemctl is-enabled cron` → `not-found`), и cron-строка пакета certbot содержит `test ! -d /run/systemd/system`, то есть под systemd мёртвая — автодеплой сделан **таймером** systemd по образцу `starburger-clearsessions` и `selfstorage-notify`, без `Persistent=true` (работает только с `OnCalendar`). Бэкап — `sqlite3.backup()`: CLI на боксе нет, модуль `sqlite3` 3.45.1 есть. Порядок — как у соседа (`~/deploy_star_burger.sh`): collectstatic перед migrate, venv бинарниками без `source activate`, `systemctl restart` коротким именем; отличия — `--ff-only`, `requirements-server.txt` с gunicorn, отсутствие certbot в деплое. Пять apt-пакетов уже стоят, `install.sh` доустанавливает только недостающие. **Найдено чужое:** `dossier.service` (главный сайт) держит `DJANGO_SECRET_KEY` прямо в юните без кавычек, systemd не разбирает значение со спецсимволами и переменная не задаётся вообще — не трогали, но у нас поэтому `EnvironmentFile=` и кавычки вокруг ключа в `.env` |
+| 30.09.2026 | **Две правки в `settings.py` из-за деплоя за nginx.** `SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")` — nginx шлёт `X-Forwarded-Proto` (он есть и у соседа), но Django его не читал: схема считалась `http`, а браузер шлёт `Origin: https://`, поэтому **любой POST, включая форму входа в админку, падал бы с 403 CSRF**. Ни один сосед это не настроил — у них нет POST-форм под HTTPS. Второе: `SECRET_KEY` и `DEBUG` имели fail-open дефолты, и при не подхватившемся `.env` Django молча поехал бы с `DEBUG=1` на публичном домене, отдав traceback с ключом и настройками; теперь при `DEBUG=0` и дефолтном ключе бросается `ImproperlyConfigured`. Проверено четырьмя прогонами `manage.py check`: локальный `.env` — 0, `DEBUG=0` с дефолтным ключом — падает, `DEBUG=0` с настоящим — 0, локальный дефолт — 0 |
+| 30.09.2026 | **`gunicorn` вынесен в `requirements-server.txt`** по решению владельца: на сервере `26.0.0`, локально ставить не нужно. Файл подтягивает `requirements.txt` через `-r`, как это уже делает `requirements-dev.txt`. В `.gitignore` добавлены `*.sqlite3-wal` и `*.sqlite3-shm` — при включённом WAL они образуют базу вместе с основным файлом, а паттерн `*.sqlite3` их не покрывал |

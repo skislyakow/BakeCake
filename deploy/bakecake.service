@@ -1,0 +1,23 @@
+[Unit]
+Description=BakeCake Gunicorn Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/bakecake/backend
+EnvironmentFile=/opt/bakecake/.env
+ExecStart=/opt/bakecake/.venv/bin/gunicorn config.wsgi:application \
+    --bind 127.0.0.1:8004 \
+    --workers 2 \
+    --timeout 120 \
+    --access-logfile /var/log/bakecake/access.log \
+    --error-logfile /var/log/bakecake/error.log
+ExecReload=/bin/kill -s HUP $MAINPID
+ExecStop=/bin/kill -s TERM $MAINPID
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

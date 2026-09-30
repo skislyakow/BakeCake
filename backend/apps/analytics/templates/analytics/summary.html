@@ -1,0 +1,113 @@
+{% extends "admin/base_site.html" %}
+
+{% block title %}Сводка{% endblock %}
+
+{% block content %}
+<style>
+  .summary-tiles { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+  .summary-tile {
+    flex: 1 1 180px; background: #fff; border: 1px solid #e2e3e5;
+    border-radius: 4px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  }
+  .summary-tile__label { color: #495057; font-size: 13px; }
+  .summary-tile__value { font-size: 24px; font-weight: 600; margin-top: 4px; color: #212529; }
+  .summary-filter { margin-bottom: 24px; }
+  .summary-filter form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .summary-filter .button { margin-left: 4px; }
+  .summary-csv { margin-bottom: 24px; display: flex; gap: 8px; flex-wrap: wrap; }
+  table.summary-table { width: 100%; margin-bottom: 24px; }
+  table.summary-table th, table.summary-table td { text-align: left; }
+</style>
+
+<div class="summary-tiles">
+  <div class="summary-tile">
+    <div class="summary-tile__label">Заказы</div>
+    <div class="summary-tile__value">{{ orders }}</div>
+  </div>
+  <div class="summary-tile">
+    <div class="summary-tile__label">Выручка</div>
+    <div class="summary-tile__value">{{ revenue }} ₽</div>
+  </div>
+  <div class="summary-tile">
+    <div class="summary-tile__label">Средний чек</div>
+    <div class="summary-tile__value">{{ avg_check }} ₽</div>
+  </div>
+  <div class="summary-tile">
+    <div class="summary-tile__label">Конверсия</div>
+    <div class="summary-tile__value">{{ conversion }}%</div>
+  </div>
+</div>
+
+<div class="summary-filter">
+  <form method="get">
+    <label for="from">С:</label>
+    <input type="date" id="from" name="from" value="{{ date_from }}">
+    <label for="to">по:</label>
+    <input type="date" id="to" name="to" value="{{ date_to }}">
+    <label for="utm_source">Канал:</label>
+    <input type="text" id="utm_source" name="utm_source" value="{{ utm_source_filter }}">
+    <button type="submit" class="button">Показать</button>
+  </form>
+</div>
+
+<div class="summary-csv">
+  <a class="button" href="/api/admin/export/orders.csv{% if date_from %}?from={{ date_from }}{% endif %}{% if date_to %}&to={{ date_to }}{% endif %}{% if utm_source_filter %}&utm_source={{ utm_source_filter }}{% endif %}">
+    Заказы CSV
+  </a>
+  <a class="button" href="/api/admin/export/stats.csv{% if date_from %}?from={{ date_from }}{% endif %}{% if date_to %}&to={{ date_to }}{% endif %}{% if utm_source_filter %}&utm_source={{ utm_source_filter }}{% endif %}">
+    Статистика CSV
+  </a>
+</div>
+
+<h2>Каналы</h2>
+<table class="summary-table">
+  <thead>
+    <tr>
+      <th>Источник</th>
+      <th>Визиты</th>
+      <th>Заказы</th>
+      <th>Оплачено</th>
+      <th>Выручка</th>
+      <th>Средний чек</th>
+      <th>Конверсия</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for channel in channels %}
+    <tr>
+      <td>{{ channel.source }}</td>
+      <td>{{ channel.visits }}</td>
+      <td>{{ channel.orders }}</td>
+      <td>{{ channel.paid }}</td>
+      <td>{{ channel.revenue }} ₽</td>
+      <td>{{ channel.avg_check }} ₽</td>
+      <td>{{ channel.conversion }}%</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7">Данных за выбранный период нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<h2>Динамика по дням</h2>
+<table class="summary-table">
+  <thead>
+    <tr>
+      <th>Дата</th>
+      <th>Заказы</th>
+      <th>Выручка</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for day in days %}
+    <tr>
+      <td>{{ day.date }}</td>
+      <td>{{ day.orders }}</td>
+      <td>{{ day.revenue }} ₽</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="3">Данных за выбранный период нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

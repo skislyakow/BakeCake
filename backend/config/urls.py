@@ -3,7 +3,6 @@ from django.urls import path
 from django.views.generic import RedirectView
 
 from apps.analytics import views as analytics_views
-from apps.catalog import views as catalog_views
 from apps.orders import views as order_views
 from apps.payments import views as payment_views
 from apps.pricing import views as pricing_views
@@ -15,7 +14,6 @@ urlpatterns = [
     path("api/auth/login/", user_views.login, name="api-login"),
     path("api/auth/logout/", user_views.logout, name="api-logout"),
     path("api/me/", user_views.me, name="api-me"),
-    path("api/catalog/", catalog_views.catalog, name="api-catalog"),
     path("api/configurator/", pricing_views.configurator, name="api-configurator"),
     path("api/quote/", order_views.quote, name="api-quote"),
     path("api/orders/", order_views.orders, name="api-orders"),

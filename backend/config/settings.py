@@ -114,3 +114,14 @@ SHOP_PHONE = os.environ.get("SHOP_PHONE", "8 (495) 000-00-00")
 YOO_SHOP_ID = os.environ.get("YOO_SHOP_ID", "")
 YOO_SECRET_KEY = os.environ.get("YOO_SECRET_KEY", "")
 JIVO_SITE_ID = os.environ.get("JIVO_SITE_ID", "")
+
+# Вход по номеру телефона. demo — любой номер создаёт пользователя (шаг 6),
+# flashcall — последние 4 цифры сверяются через Звонок™ (шаг 27).
+AUTH_MODE = os.environ.get("AUTH_MODE", "demo")
+ZVONOK_API_KEY = os.environ.get("ZVONOK_API_KEY", "")
+ZVONOK_API_SECRET = os.environ.get("ZVONOK_API_SECRET", "")
+# Адрес метода Flash Call вынесен в настройку: точный путь и имена полей
+# в документации Звонка не опубликованы, проверять надо по ключам аккаунта.
+ZVONOK_FLASHCALL_URL = os.environ.get(
+    "ZVONOK_FLASHCALL_URL", "https://api.zvonok.com/v1/verification/flashcall"
+)

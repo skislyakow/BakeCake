@@ -1,0 +1,33 @@
+{% load static %}
+<footer class="mt-5 cake__bg_blue" id="Contacts">
+	<div class="container my-5 py-5">
+		<div class="row">
+			<div class="col-4 col-xl-2 d-flex flex-column">
+				<div>
+					<img src="{% static 'img/Logo.svg' %}" alt="CakeBake" class="mb-2">
+				</div>
+				<small class="text-white fs_12">©2022 CakeBake</small>
+				<small class="text-white fs_12">Все права защищены.</small>
+				<div class="flex-grow-1 d-flex align-items-end">
+					<small class="text-white fs_12">г. Москва,  Большой Козловский пер., д. 12</small>
+				</div>
+			</div>
+			<div class="col-4 col-xl-2 d-flex flex-column">
+				<a href="#" class="text-decoration-none text-white">На свадьбу</a>
+				<a href="#" class="text-decoration-none text-white">На день рождения</a>
+				<a href="#" class="text-decoration-none text-white">На чаепитие</a>
+			</div>
+			<div class="col-4 col-xl-2 d-flex flex-column">
+				<a href="{% url 'home' %}#step3" class="text-decoration-none text-white">Создать торт</a>
+				<a href="{% url 'home' %}#step2" class="text-decoration-none text-white">Каталог</a>
+				<a href="{% url 'home' %}#Contacts" class="text-decoration-none text-white">Контакты</a>
+			</div>
+			<div class="col-12 col-xl-6 d-flex flex-column align-items-start align-items-xl-end mt-3 mt-xl-0">
+				<a href="https://vk.com/devmanorg"><img src="{% static 'img/vk.svg' %}" alt="VK" class="mb-3 mb-xl-5"></a>
+				<small class="text-white fs_12">8 (495) 000-00-00</small>
+				<small class="text-white fs_12">info@cakebake.ru</small>
+				<small class="text-white fs_12">Пн - Вс 10:00—20:00</small>
+			</div>
+		</div>
+	</div>
+</footer>

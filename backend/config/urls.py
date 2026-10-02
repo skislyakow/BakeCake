@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.urls import path
-from django.views.generic import RedirectView
+from django.views.generic import TemplateView
 
 from apps.analytics import views as analytics_views
 from apps.orders import views as order_views
@@ -10,7 +10,7 @@ from apps.users import views as user_views
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("", RedirectView.as_view(url="/admin/", permanent=False)),
+    path("", TemplateView.as_view(template_name="home.html"), name="home"),
     path("api/auth/login/", user_views.login, name="api-login"),
     path("api/auth/logout/", user_views.logout, name="api-logout"),
     path("api/me/", user_views.me, name="api-me"),

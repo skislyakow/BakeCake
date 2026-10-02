@@ -38,21 +38,50 @@ Vue.createApp({
             },
             Step: 'Number',
             RegInput: '',
-            EnteredNumber: ''
+            EnteredNumber: '',
+            Consent: false,
+            ApiError: '',
+            Loading: false
         }
     },
+    watch: {
+        RegInput() { this.ApiError = '' },
+        Consent() { this.ApiError = '' }
+    },
     methods: {
-        RegSubmit() {
+        async RegSubmit() {
+            this.ApiError = ''
             if (this.Step === 'Number') {
-                this.$refs.HiddenFormSubmitReg.click()
+                if (!this.Consent) {
+                    this.ApiError = 'Необходимо согласие на обработку персональных данных'
+                    return
+                }
                 this.Step = 'Code'
                 this.EnteredNumber = this.RegInput
                 this.RegInput = ''
+                return
             }
-            else {
-                this.$refs.HiddenFormSubmitReg.click()
+            if (this.Step === 'Code') {
+                if (this.Loading) return
+                this.Loading = true
+                const data = await api('/api/auth/login/', 'POST', {
+                    phone: this.EnteredNumber,
+                    last4: this.RegInput,
+                    consent_pdp: this.Consent
+                })
+                this.Loading = false
+                if (!data.ok) {
+                    const message = firstError(data)
+                    if (data.errors && data.errors.phone) {
+                        this.ToRegStep1()
+                    }
+                    this.$nextTick(() => { this.ApiError = message })
+                    return
+                }
                 this.Step = 'Finish'
                 this.RegInput = 'Регистрация успешна'
+                // перезагрузка: шапка рисуется на сервере, а csrf-токен меняется при входе
+                setTimeout(() => window.location.reload(), 800)
             }
         },
         ToRegStep1() {
@@ -62,7 +91,8 @@ Vue.createApp({
         Reset() {
             this.Step = 'Number'
             this.RegInput = ''
-            EnteredNumber = ''
+            this.EnteredNumber = ''
+            this.ApiError = ''
         }
     }
 }).mount('#RegModal')

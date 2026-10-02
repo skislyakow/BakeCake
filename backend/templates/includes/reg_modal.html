@@ -8,10 +8,6 @@
 					<div class="modal-header border-0 py-0">
 						<label for="reg" class="modal-title font_Gogh fs_40 cake_blue" id="RegModalLabel">Вход / Регистрация</label>
 					</div>
-					<form class="d-none">
-						<input v-model="RegInput" type="text" name="REG">
-						<button type="submit" ref="HiddenFormSubmitReg">reg</button>
-					</form>
 					<v-form :validation-schema="RegSchema" class="modal-body position-relative d-flex flex-column align-items-center px-5 pb-4" @submit="RegSubmit">
 						<v-field v-if="RegInput !== 'Регистрация успешна'" v-model="RegInput" name="reg" type="text" id="reg" :placeholder="Step === `Number` ? `Введите ваш номер` : `Введите код`" class="form-control cake__textinput"></v-field>
 						<v-field v-if="Step === 'Number'" v-model="RegInput" type="phone" name="phone_format" class="d-none"></v-field>
@@ -26,10 +22,14 @@
 							{% verbatim %}{{Step === 'Number' ? 'Введите номер' : 'Введите код'}}{% endverbatim %}</error-message></small>
 						<error-message name="phone_format" class="fs_12 cake_pink text-center position-absolute bottom-0"></error-message>
 						<error-message name="code_format" class="fs_12 cake_pink text-center position-absolute bottom-0"></error-message>
+						<small v-if="ApiError" class="fs_12 cake_pink text-center position-absolute bottom-0">{% verbatim %}{{ ApiError }}{% endverbatim %}</small>
 					</v-form>
 
 					<div class="modal-footer d-flex flex-column justify-content-between align-items-center text-center border-0 mx-5">
-						<p class="fs_12 cake_grey">{% verbatim %}{{Step === `Number` ? `Нажимая на кнопку, вы соглашаетесь на обработку персональных данных в соответствии с политикой конфиденциальности` : Step === 'Code' ? `Осталось времени: 05:00` : ``}}{% endverbatim %}</p>
+						<p class="fs_12 cake_grey">
+						<input v-if="Step === 'Number'" v-model="Consent" type="checkbox" id="consent" name="consent" class="me-1" style="accent-color: #DA87A9">
+						<label for="consent" class="fs_12 cake_grey">{% verbatim %}{{Step === `Number` ? `Нажимая на кнопку, вы соглашаетесь на обработку персональных данных в соответствии с политикой конфиденциальности` : Step === 'Code' ? `Осталось времени: 05:00` : ``}}{% endverbatim %}</label>
+					</p>
 						<a href="#" v-if="Step === `Code`" @click.prevent="ToRegStep1" class="text-decoration-none cake_pink fs_12">изменить данные</a>
 					</div>
 				</div>

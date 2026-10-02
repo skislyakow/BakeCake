@@ -31,13 +31,13 @@
 						<!--метка на иконке, убрать класс d-none чтоб появилась-->
 						<span class="position-absolute translate-middle badge rounded-pill cake__bg_pink fs_8 d-none">1</span>
 					</a>
-					<a class="nav-link fw-lighter me-1 cake_blue position-relative" href="#RegModal" data-bs-toggle="modal">
+					<a class="nav-link fw-lighter me-1 cake_blue position-relative" {% if user.is_authenticated %}href="/lk/"{% else %}href="#RegModal" data-bs-toggle="modal"{% endif %}>
 						<img src="{% static 'img/user.svg' %}" alt="">
 						<!--метка на иконке, убрать класс d-none чтоб появилась-->
 						<span class="position-absolute translate-middle badge rounded-pill cake__bg_pink fs_8 d-none">1</span>
 					</a>
-					<a class="nav-link fw-lighter cake_grey fs_12 d-none" href="#">
-						Ирина
+					<a class="nav-link fw-lighter cake_grey fs_12{% if not user.is_authenticated %} d-none{% endif %}" href="/lk/">
+						{% if user.is_authenticated %}{{ user.name|default:user.phone }}{% endif %}
 					</a>
 				</li>
 			</ul>

@@ -3,6 +3,9 @@
 {% load dashboard %}
 
 {% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static "admin/css/dashboard.css" %}"><style>
+.dashboard #content {
+    width: auto;
+}
 #content-main {
     display: block;
 }

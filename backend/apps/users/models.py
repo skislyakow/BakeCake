@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
+from .utils import normalize_phone
+
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
@@ -9,6 +11,7 @@ class UserManager(BaseUserManager):
     def _create_user(self, phone, name="", email="", password=None, **extra):
         if not phone:
             raise ValueError("Номер телефона обязателен")
+        phone = normalize_phone(phone)
         user = self.model(phone=phone, name=name, email=self.normalize_email(email), **extra)
         if password:
             user.set_password(password)

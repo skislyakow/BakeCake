@@ -13,6 +13,7 @@ from apps.analytics.views import _read_first_touch
 from apps.orders.models import Issue, Order, OrderEvent
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
+from apps.users.utils import normalize_phone
 from apps.users.models import Profile
 
 User = get_user_model()
@@ -208,7 +209,7 @@ def orders(request):
         return ok(items=items)
 
     body = request.data
-    phone = (body.get("phone") or "").strip()
+    phone = normalize_phone(body.get("phone"))
     if not phone:
         return fail({"phone": "Введите номер телефона"})
 

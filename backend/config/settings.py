@@ -80,6 +80,7 @@ def enable_wal(sender, connection, **kwargs):
 
 connection_created.connect(enable_wal)
 AUTH_USER_MODEL = "users.User"
+AUTHENTICATION_BACKENDS = ["apps.users.backends.PhoneBackend"]
 AUTH_PASSWORD_VALIDATORS = []
 LOGIN_URL = "/lk/"
 LANGUAGE_CODE = "ru-ru"

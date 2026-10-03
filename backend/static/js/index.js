@@ -100,6 +100,9 @@ Vue.createApp({
             },
             Config: null,
             ConfigError: '',
+            Authed: false,
+            Hydrated: false,
+            SaveTimer: null,
             Sel: {levels: 0, form: 0, topping: 0, berries: 0, decor: 0},
             Words: '',
             Comments: '',
@@ -135,6 +138,33 @@ Vue.createApp({
                 this.QuoteError = firstError(data)
             }
         },
+        async FillProfile() {
+            const me = await api('/api/me/')
+            if (!me.ok) return
+            this.Authed = true
+            this.Name = me.name || ''
+            this.Phone = me.phone || null
+            this.Email = me.email || null
+            let address = me.default_address || ''
+            if (!address) {
+                const orders = await api('/api/orders/')
+                if (orders.ok && orders.items && orders.items.length) {
+                    address = orders.items[0].address || ''
+                }
+            }
+            this.Address = address || null
+        },
+        SaveProfile() {
+            if (!this.Authed || !this.Hydrated) return
+            clearTimeout(this.SaveTimer)
+            this.SaveTimer = setTimeout(() => {
+                api('/api/me/', 'PATCH', {
+                    name: this.Name,
+                    email: this.Email,
+                    default_address: this.Address
+                })
+            }, 600)
+        },
         ToStep4() {
             this.Designed = true
             setTimeout(() => this.$refs.ToStep4.click(), 0);
@@ -147,6 +177,8 @@ Vue.createApp({
             return
         }
         this.Config = data
+        await this.FillProfile()
+        this.Hydrated = true
     },
     computed: {
         Groups() {
@@ -191,6 +223,15 @@ Vue.createApp({
         }
     },
     watch: {
+        Name() {
+            this.SaveProfile()
+        },
+        Email() {
+            this.SaveProfile()
+        },
+        Address() {
+            this.SaveProfile()
+        },
         QuoteBody: {
             handler(body) {
                 clearTimeout(this.QuoteTimer)

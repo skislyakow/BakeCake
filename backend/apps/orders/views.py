@@ -143,6 +143,7 @@ def _serialize(order, full=False):
         "total": order.total,
         "delivery_date": order.delivery_date.isoformat(),
         "delivery_time": order.delivery_time.strftime("%H:%M"),
+        "address": order.address,
         "is_rush": order.is_rush,
         "is_rescheduled": order.is_rescheduled,
         "reschedule_note": order.reschedule_note,

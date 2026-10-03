@@ -11,10 +11,11 @@ class VisitAdmin(admin.ModelAdmin):
         "created",
         "utm_source",
         "utm_medium",
+        "utm_campaign",
         "landing_path",
         "session_key",
     )
-    list_filter = ("utm_source", "utm_medium")
-    search_fields = ("utm_source", "utm_campaign", "landing_path", "session_key")
+    list_filter = ("utm_source", "utm_medium", "utm_campaign")
+    search_fields = ("utm_source", "utm_campaign", "utm_medium", "landing_path", "session_key")
     date_hierarchy = "created"
     readonly_fields = [f.name for f in Visit._meta.fields]

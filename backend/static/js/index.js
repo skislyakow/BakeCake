@@ -114,6 +114,7 @@ Vue.createApp({
             Promo: '',
             OrderError: '',
             OrderPlaced: '',
+            Submitting: false,
 
             Name: '',
             Phone: null,
@@ -169,25 +170,55 @@ async FillProfile() {
             }, 600)
         },
         async SubmitOrder() {
-            const body = {
-                spec: {...this.Sel, inscription: this.Words.trim()},
-                name: this.Name,
-                phone: this.Phone,
-                email: this.Email,
-                address: this.Address,
-                delivery_date: this.Dates,
-                delivery_time: this.Time,
-                comment: this.Comments,
-                courier_comment: this.DelivComments,
-                promo_code: this.Promo
-            }
+            if (this.Submitting) return
+            this.Submitting = true
             this.OrderError = ''
             this.OrderPlaced = ''
-            const data = await api('/api/orders/', 'POST', body)
-            if (data.ok) {
-                this.OrderPlaced = data.number
+            try {
+                const data = await api('/api/orders/', 'POST', {
+                    spec: {...this.Sel, inscription: this.Words.trim()},
+                    name: this.Name,
+                    phone: this.Phone,
+                    email: this.Email,
+                    address: this.Address,
+                    delivery_date: this.Dates,
+                    delivery_time: this.Time,
+                    comment: this.Comments,
+                    courier_comment: this.DelivComments,
+                    promo_code: this.Promo
+                })
+                if (data.ok) {
+                    this.OrderPlaced = data.number
+                    this.ResetForms()
+                } else {
+                    this.OrderError = firstError(data)
+                }
+            } finally {
+                this.Submitting = false
+            }
+        },
+        ResetForms() {
+            clearTimeout(this.SaveTimer)
+            this.Hydrated = false
+            this.Sel = {levels: 0, form: 0, topping: 0, berries: 0, decor: 0}
+            this.Words = ''
+            this.Comments = ''
+            this.DelivComments = ''
+            this.Promo = ''
+            this.Quote = null
+            this.QuoteError = ''
+            this.Dates = null
+            this.Time = null
+            this.Name = ''
+            this.Phone = null
+            this.Email = null
+            this.Address = null
+            if (this.Authed) {
+                this.FillProfile().finally(() => {
+                    this.Hydrated = true
+                })
             } else {
-                this.OrderError = firstError(data)
+                this.Hydrated = true
             }
         },
         ToStep4() {

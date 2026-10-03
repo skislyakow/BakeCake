@@ -1,5 +1,4 @@
 from django.http import HttpResponse
-from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
 
@@ -178,15 +177,3 @@ def export_stats_csv(request):
         for channel in data["channels"]
     ]
     return _csv_response("stats.csv", CSV_STATS_COLUMNS, rows)
-
-
-def summary(request):
-    from_date, to_date, utm_source = _date_params(request)
-    data = stats_helpers.build_stats(from_date, to_date, utm_source)
-    context = {
-        **data,
-        "date_from": from_date.isoformat() if from_date else "",
-        "date_to": to_date.isoformat() if to_date else "",
-        "utm_source_filter": utm_source or "",
-    }
-    return render(request, "analytics/summary.html", context)

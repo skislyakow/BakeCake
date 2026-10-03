@@ -1,19 +1,6 @@
 from django.contrib import admin
-from django.urls import path
 
-from apps.analytics import views
 from apps.analytics.models import Visit
-
-_original_get_urls = admin.site.get_urls
-
-
-def _get_urls():
-    urls = _original_get_urls()
-    urls = [path("summary/", admin.site.admin_view(views.summary), name="analytics-summary")] + urls
-    return urls
-
-
-admin.site.get_urls = _get_urls
 
 
 @admin.register(Visit)

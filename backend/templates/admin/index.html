@@ -46,6 +46,7 @@
 @media (max-width: 1200px) { .dash-grid { grid-template-columns: 1fr; } }
 #content-related { margin-top: 0; }
 table.dash-recent td, table.dash-recent th { padding: 6px 10px; }
+.dash-csv { margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
 </style>{% endblock %}
 
 {% block coltype %}colMS{% endblock %}
@@ -65,12 +66,20 @@ table.dash-recent td, table.dash-recent th { padding: 6px 10px; }
     </a>
     {% endfor %}
     <a class="dash-card dash-good" href="{% url 'admin:orders_order_changelist' %}">
-      <strong class="dash-count">{{ summary.revenue_today }} ₽</strong>
-      <span class="dash-label">Выручка сегодня</span>
+      <strong class="dash-count">{{ summary.metrics.orders }}</strong>
+      <span class="dash-label">Заказы за месяц</span>
     </a>
     <a class="dash-card dash-good" href="{% url 'admin:orders_order_changelist' %}">
-      <strong class="dash-count">{{ summary.revenue_month }} ₽</strong>
+      <strong class="dash-count">{{ summary.metrics.revenue }} ₽</strong>
       <span class="dash-label">Выручка за месяц</span>
+    </a>
+    <a class="dash-card" href="{% url 'admin:orders_order_changelist' %}">
+      <strong class="dash-count">{{ summary.metrics.avg_check }} ₽</strong>
+      <span class="dash-label">Средний чек</span>
+    </a>
+    <a class="dash-card" href="{% url 'admin:orders_order_changelist' %}">
+      <strong class="dash-count">{{ summary.metrics.conversion }}%</strong>
+      <span class="dash-label">Конверсия</span>
     </a>
     <a class="dash-card{% if summary.open_issues %} dash-warn{% endif %}" href="{% url 'admin:orders_issue_changelist' %}?resolved=0">
       <strong class="dash-count">{{ summary.open_issues }}</strong>
@@ -97,6 +106,62 @@ table.dash-recent td, table.dash-recent th { padding: 6px 10px; }
         </tbody>
       </table>
     </div>
+  </div>
+
+  <div class="module">
+    <h2>Каналы</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Источник</th>
+          <th>Визиты</th>
+          <th>Заказы</th>
+          <th>Оплачено</th>
+          <th>Выручка</th>
+          <th>Средний чек</th>
+          <th>Конверсия</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for channel in summary.channels %}
+        <tr>
+          <td>{{ channel.source }}</td>
+          <td>{{ channel.visits }}</td>
+          <td>{{ channel.orders }}</td>
+          <td>{{ channel.paid }}</td>
+          <td>{{ channel.revenue }} ₽</td>
+          <td>{{ channel.avg_check }} ₽</td>
+          <td>{{ channel.conversion }}%</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">Данных за месяц нет</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="module">
+    <h2>Динамика по дням</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Заказы</th>
+          <th>Выручка</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for day in summary.days %}
+        <tr>
+          <td>{{ day.date }}</td>
+          <td>{{ day.orders }}</td>
+          <td>{{ day.revenue }} ₽</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">Данных за месяц нет</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
 
   <div class="module">
@@ -129,6 +194,9 @@ table.dash-recent td, table.dash-recent th { padding: 6px 10px; }
     </table>
   </div>
 
-  {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+  <div class="dash-csv">
+    <a class="button" href="/api/admin/export/orders.csv?from={{ summary.csv_from }}&to={{ summary.csv_to }}">Заказы CSV</a>
+    <a class="button" href="/api/admin/export/stats.csv?from={{ summary.csv_from }}&to={{ summary.csv_to }}">Статистика CSV</a>
+  </div>
 </div>
 {% endblock %}

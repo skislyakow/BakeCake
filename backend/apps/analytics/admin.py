@@ -14,7 +14,6 @@ def _get_urls():
 
 
 admin.site.get_urls = _get_urls
-admin.site.index_template = "analytics/admin_index.html"
 
 
 @admin.register(Visit)

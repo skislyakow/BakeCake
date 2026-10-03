@@ -1,0 +1,134 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+{% load dashboard %}
+
+{% block extrastyle %}{{ block.super }}<link rel="stylesheet" href="{% static "admin/css/dashboard.css" %}"><style>
+#content-main {
+    display: block;
+}
+.dash-cards {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.dash-card {
+    flex: 1 1 180px;
+    min-width: 180px;
+    padding: 14px 16px;
+    border: 1px solid var(--body-quiet-color);
+    border-radius: 10px;
+    background: var(--body-bg);
+}
+.dash-card a {
+    color: var(--body-fg);
+}
+.dash-card strong.dash-count {
+    display: block;
+    font-size: 26px;
+    line-height: 1.2;
+    margin-bottom: 4px;
+}
+.dash-card .dash-label {
+    font-size: 12px;
+    color: var(--body-quiet-color);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.dash-card.dash-good strong.dash-count { color: var(--link-fg); }
+.dash-card.dash-warn strong.dash-count { color: var(--error-fg); }
+.dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+@media (max-width: 1200px) { .dash-grid { grid-template-columns: 1fr; } }
+#content-related { margin-top: 0; }
+table.dash-recent td, table.dash-recent th { padding: 6px 10px; }
+</style>{% endblock %}
+
+{% block coltype %}colMS{% endblock %}
+
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+
+{% block content %}
+{% dashboard_summary as summary %}
+<div id="content-main">
+  <h1>{% translate 'Dashboard' %}</h1>
+
+  <div class="dash-cards">
+    {% for item in summary.status_counts %}
+    <a class="dash-card" href="{% url 'admin:orders_order_changelist' %}?status={{ item.value }}">
+      <strong class="dash-count">{{ item.count }}</strong>
+      <span class="dash-label">{{ item.label }}</span>
+    </a>
+    {% endfor %}
+    <a class="dash-card dash-good" href="{% url 'admin:orders_order_changelist' %}">
+      <strong class="dash-count">{{ summary.revenue_today }} ₽</strong>
+      <span class="dash-label">Выручка сегодня</span>
+    </a>
+    <a class="dash-card dash-good" href="{% url 'admin:orders_order_changelist' %}">
+      <strong class="dash-count">{{ summary.revenue_month }} ₽</strong>
+      <span class="dash-label">Выручка за месяц</span>
+    </a>
+    <a class="dash-card{% if summary.open_issues %} dash-warn{% endif %}" href="{% url 'admin:orders_issue_changelist' %}?resolved=0">
+      <strong class="dash-count">{{ summary.open_issues }}</strong>
+      <span class="dash-label">Жалобы (открытые)</span>
+    </a>
+  </div>
+
+  <div class="dash-grid">
+    <div class="module">
+      <h2>Доставки сегодня</h2>
+      <table>
+        <tbody>
+          <tr><th>Заказов</th><td>{{ summary.today_count }}</td></tr>
+          <tr><th>Оплачено на</th><td>{{ summary.today_revenue }} ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="module">
+      <h2>Доставки завтра</h2>
+      <table>
+        <tbody>
+          <tr><th>Заказов</th><td>{{ summary.tomorrow_count }}</td></tr>
+          <tr><th>Оплачено на</th><td>{{ summary.tomorrow_revenue }} ₽</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="module">
+    <h2>Последние заказы</h2>
+    <table class="dash-recent">
+      <thead>
+        <tr>
+          <th>Номер</th>
+          <th>Телефон</th>
+          <th>Адрес</th>
+          <th>Доставка</th>
+          <th>Итого</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for order in summary.recent_orders %}
+        <tr>
+          <td><a href="{% url 'admin:orders_order_change' order.pk %}">{{ order.number }}</a></td>
+          <td>{{ order.user.phone }}</td>
+          <td>{{ order.address|truncatechars:40 }}</td>
+          <td>{{ order.delivery_date|date:"d.m" }}, {{ order.delivery_time|time:"H:i" }}</td>
+          <td>{{ order.total }} ₽</td>
+          <td>{{ order.get_status_display }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">Заказов пока нет.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+</div>
+{% endblock %}

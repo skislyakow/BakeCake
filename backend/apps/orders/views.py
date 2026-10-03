@@ -5,6 +5,7 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 
 from config.responses import fail, ok
+from apps.orders.models import Issue
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
 
@@ -129,36 +130,68 @@ def _created_order_response():
     return ok(number="2239400223", total=2367, is_rush=False, payment_url="")
 
 
-def _order_list_response():
-    return ok(items=[])
+def _spec_labels(order):
+    return [item["title"] for item in order.price_items if isinstance(item, dict) and item.get("title")]
+
+
+def _serialize(order, full=False):
+    data = {
+        "number": order.number,
+        "status": order.status,
+        "status_label": order.get_status_display(),  # pyright: ignore[reportAttributeAccessIssue]
+        "spec_labels": _spec_labels(order),
+        "total": order.total,
+        "delivery_date": order.delivery_date.isoformat(),
+        "delivery_time": order.delivery_time.strftime("%H:%M"),
+        "is_rush": order.is_rush,
+        "is_rescheduled": order.is_rescheduled,
+        "reschedule_note": order.reschedule_note,
+    }
+    if full:
+        data.update(
+            spec=order.spec,
+            comment=order.comment,
+            courier_comment=order.courier_comment,
+        )
+    return data
+
+
+def _user_order_or_fail(request, number):
+    if not request.user.is_authenticated:
+        return fail({"auth": "Не авторизован"}), None
+    order = request.user.orders.filter(number=str(number)).first()
+    if order is None:
+        return fail({"number": "Заказ не найден"}), None
+    return None, order
 
 
 @api_view(["GET", "POST"])
 def orders(request):
+    if not request.user.is_authenticated:
+        return fail({"auth": "Не авторизован"})
     if request.method == "POST":
         return _created_order_response()
-    return _order_list_response()
+    items = [_serialize(order) for order in request.user.orders.order_by("-created")]
+    return ok(items=items)
 
 
 @api_view(["GET"])
 def order_detail(request, number):
-    return ok(
-        number=str(number),
-        status="paid",
-        status_label="Оплачен",
-        spec={},
-        spec_labels=[],
-        total=2367,
-        delivery_date="2026-10-05",
-        delivery_time="12:00",
-        is_rush=False,
-        is_rescheduled=True,
-        reschedule_note="Новые сроки: 16:00",
-        comment="",
-        courier_comment="звонить за час",
-    )
+    error, order = _user_order_or_fail(request, number)
+    if error is not None:
+        return error
+    return ok(**_serialize(order, full=True))
 
 
 @api_view(["POST"])
 def order_issue(request, number):
+    error, order = _user_order_or_fail(request, number)
+    if error is not None:
+        return error
+
+    message = (request.data.get("message") or "").strip()
+    if not message:
+        return fail({"message": "Напишите, что случилось"})
+
+    Issue.objects.create(order=order, message=message)
     return ok()

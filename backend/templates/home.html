@@ -83,77 +83,31 @@
 		<article id="VueApp">
 			<section class="row pt-header" id="step3">
 				<h2 class="font_Gogh fs_40 cake_blue text-center">Создать свой торт</h2>
+				<p v-if="ConfigError" class="cake_pink text-center">{% verbatim %}{{ ConfigError }}{% endverbatim %}</p>
 				<v-form :validation-schema="schema1" @submit="ToStep4">
-					<div class="d-flex justify-content-end align-items-center position-relative">
+					<div class="d-flex justify-content-end align-items-center position-relative sticky-top bg-white" style="top: calc(58px + 1.6rem)">
 				<span class="cake_pink position-absolute start-0 top-50">
 					<error-message name="lvls" class="from__alert"></error-message>
 					<error-message name="form" class="from__alert"></error-message>
 					<error-message name="topping" class="from__alert"></error-message>
 				</span>
+						<span v-if="IsRush" class="cake_pink me-3 mt-5">{% verbatim %}Срочный заказ, +{{ RushPercent }}%{% endverbatim %}</span>
 						<span class="z-index-1 fs_40 cake_pink text-end mt-5" id="cost">{% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
 					</div>
-					<div class="d-flex align-items-center flex-wrap mb-3">
-						<span class="me-3 fs_40 cake_blue">Количество уровней</span>
-						<v-field v-model="Levels" type="radio" name="lvls" id="num1" value="1" class="d-none cake__input"></v-field>
-						<label for="num1" class="mx-2 px-3 py-1 cake_grey cake__label">1</label>
-						<v-field v-model="Levels" type="radio" name="lvls" id="num2" value="2" class="d-none cake__input"></v-field>
-						<label for="num2" class="mx-2 px-3 py-1 cake_grey cake__label">2</label>
-						<v-field v-model="Levels" type="radio" name="lvls" id="num3" value="3" class="d-none cake__input"></v-field>
-						<label for="num3" class="mx-2 px-3 py-1 cake_grey cake__label">3</label>
-					</div>
-
-					<div class="d-flex align-items-center flex-wrap mb-3">
-						<span class="me-3 fs_40 cake_blue">Форма</span>
-						<v-field v-model="Form" type="radio" name="form" id="form1" value="1" class="d-none cake__input"></v-field>
-						<label for="form1" class="mx-2 px-3 py-1 cake_grey cake__label">Круг</label>
-						<v-field v-model="Form" type="radio" name="form" id="form2" value="2" class="d-none cake__input"></v-field>
-						<label for="form2" class="mx-2 px-3 py-1 cake_grey cake__label">Квадрат</label>
-						<v-field v-model="Form" type="radio" name="form" id="form3" value="3" class="d-none cake__input"></v-field>
-						<label for="form3" class="mx-2 px-3 py-1 cake_grey cake__label">Прямоугольник</label>
-					</div>
-					<div class="d-flex align-items-center flex-wrap mb-3">
-						<span class="me-3 fs_40 cake_blue">Топпинг</span>
-						<v-field v-model="Topping" type="radio" name="topping" id="topping1" value="1" class="d-none cake__input"></v-field>
-						<label for="topping1" class="mx-2 px-3 py-1 cake_grey cake__label">Без</label>
-						<v-field v-model="Topping" type="radio" name="topping" id="topping2" value="2" class="d-none cake__input"></v-field>
-						<label for="topping2" class="mx-2 px-3 py-1 cake_grey cake__label">Белый соус</label>
-						<v-field v-model="Topping" type="radio" name="topping" id="topping3" value="3" class="d-none cake__input"></v-field>
-						<label for="topping3" class="mx-2 px-3 py-1 cake_grey cake__label">Карамельный</label>
-						<v-field v-model="Topping" type="radio" name="topping" id="topping4" value="4" class="d-none cake__input"></v-field>
-						<label for="topping4" class="mx-2 px-3 py-1 cake_grey cake__label">Кленовый</label>
-						<v-field v-model="Topping" type="radio" name="topping" id="topping5" value="5" class="d-none cake__input"></v-field>
-						<label for="topping5" class="mx-2 px-3 py-1 cake_grey cake__label">Черничный</label>
-						<v-field v-model="Topping" type="radio" name="topping" id="topping6" value="6" class="d-none cake__input"></v-field>
-						<label for="topping6" class="mx-2 px-3 py-1 cake_grey cake__label">Молочный шоколад</label>
-						<v-field v-model="Topping" type="radio" name="topping" id="topping7" value="7" class="d-none cake__input"></v-field>
-						<label for="topping7" class="mx-2 px-3 py-1 cake_grey cake__label">Клубничный</label>
+					<div v-for="g in Required" :key="g.code" class="d-flex align-items-center flex-wrap mb-3">
+						<span class="me-3 fs_40 cake_blue">{% verbatim %}{{ g.title }}{% endverbatim %}</span>
+						<template v-for="(o, i) in g.options" :key="o.id">
+							<v-field v-model="Sel[g.code]" type="radio" :name="g.field" :id="g.prefix + (i + 1)" :value="o.id" class="d-none cake__input"></v-field>
+							<label :for="g.prefix + (i + 1)" class="mx-2 px-3 py-1 cake_grey cake__label">{% verbatim %}{{ o.title }}{% endverbatim %}</label>
+						</template>
 					</div>
 					<h1 class="me-3 fs_40 cake_pink mb-3 mt-5">Дополнительно</h1>
-					<div class="d-flex align-items-center flex-wrap mb-3">
-						<span class="me-3 fs_40 cake_blue">Ягоды</span>
-						<v-field v-model="Berries" type="radio" name="berries" id="berries1" value="1" class="d-none cake__input"></v-field>
-						<label for="berries1" class="mx-2 px-3 py-1 cake_grey cake__label">Ежевика</label>
-						<v-field v-model="Berries" type="radio" name="berries" id="berries2" value="2" class="d-none cake__input"></v-field>
-						<label for="berries2" class="mx-2 px-3 py-1 cake_grey cake__label">Малина</label>
-						<v-field v-model="Berries" type="radio" name="berries" id="berries3" value="3" class="d-none cake__input"></v-field>
-						<label for="berries3" class="mx-2 px-3 py-1 cake_grey cake__label">Голубика</label>
-						<v-field v-model="Berries" type="radio" name="berries" id="berries4" value="4" class="d-none cake__input"></v-field>
-						<label for="berries4" class="mx-2 px-3 py-1 cake_grey cake__label">Клубника</label>
-					</div>
-					<div class="d-flex align-items-center flex-wrap mb-3">
-						<span class="me-3 fs_40 cake_blue">Декор</span>
-						<v-field v-model="Decor" type="radio" name="decor" id="decor1" value="1" class="d-none cake__input"></v-field>
-						<label for="decor1" class="mx-2 px-3 py-1 cake_grey cake__label">Фисташки</label>
-						<v-field v-model="Decor" type="radio" name="decor" id="decor2" value="2" class="d-none cake__input"></v-field>
-						<label for="decor2" class="mx-2 px-3 py-1 cake_grey cake__label">Безе</label>
-						<v-field v-model="Decor" type="radio" name="decor" id="decor3" value="3" class="d-none cake__input"></v-field>
-						<label for="decor3" class="mx-2 px-3 py-1 cake_grey cake__label">Фундук</label>
-						<v-field v-model="Decor" type="radio" name="decor" id="decor4" value="4" class="d-none cake__input"></v-field>
-						<label for="decor4" class="mx-2 px-3 py-1 cake_grey cake__label">Пекан</label>
-						<v-field v-model="Decor" type="radio" name="decor" id="decor5" value="5" class="d-none cake__input"></v-field>
-						<label for="decor5" class="mx-2 px-3 py-1 cake_grey cake__label">Маршмеллоу</label>
-						<v-field v-model="Decor" type="radio" name="decor" id="decor6" value="6" class="d-none cake__input"></v-field>
-						<label for="decor6" class="mx-2 px-3 py-1 cake_grey cake__label">Марципан</label>
+					<div v-for="g in Extra" :key="g.code" class="d-flex align-items-center flex-wrap mb-3">
+						<span class="me-3 fs_40 cake_blue">{% verbatim %}{{ g.title }}{% endverbatim %}</span>
+						<template v-for="(o, i) in g.options" :key="o.id">
+							<v-field v-model="Sel[g.code]" type="radio" :name="g.field" :id="g.prefix + (i + 1)" :value="o.id" class="d-none cake__input"></v-field>
+							<label :for="g.prefix + (i + 1)" class="mx-2 px-3 py-1 cake_grey cake__label">{% verbatim %}{{ o.title }}{% endverbatim %}</label>
+						</template>
 					</div>
 					<div class="row mb-3">
 						<div class="col-5 col-md-4 col-lg-3">
@@ -176,34 +130,10 @@
 
 			<section class="row pt-header" id="step4" v-if="Designed">
 				<form class="d-none">
-					<input v-model="Levels" value="1" type="radio" name="LEVELS">
-					<input v-model="Levels" value="2" type="radio" name="LEVELS">
-					<input v-model="Levels" value="3" type="radio" name="LEVELS">
-					<br>
-					<input v-model="Form" value="1" type="radio" name="FORM">
-					<input v-model="Form" value="2" type="radio" name="FORM">
-					<input v-model="Form" value="3" type="radio" name="FORM">
-					<br>
-					<input v-model="Topping" value="1" type="radio" name="TOPPING">
-					<input v-model="Topping" value="2" type="radio" name="TOPPING">
-					<input v-model="Topping" value="3" type="radio" name="TOPPING">
-					<input v-model="Topping" value="4" type="radio" name="TOPPING">
-					<input v-model="Topping" value="5" type="radio" name="TOPPING">
-					<input v-model="Topping" value="6" type="radio" name="TOPPING">
-					<input v-model="Topping" value="7" type="radio" name="TOPPING">
-					<br>
-					<input v-model="Berries" value="1" type="radio" name="BERRIES">
-					<input v-model="Berries" value="2" type="radio" name="BERRIES">
-					<input v-model="Berries" value="3" type="radio" name="BERRIES">
-					<input v-model="Berries" value="4" type="radio" name="BERRIES">
-					<br>
-					<input v-model="Decor" value="1" type="radio" name="DECOR">
-					<input v-model="Decor" value="2" type="radio" name="DECOR">
-					<input v-model="Decor" value="3" type="radio" name="DECOR">
-					<input v-model="Decor" value="4" type="radio" name="DECOR">
-					<input v-model="Decor" value="5" type="radio" name="DECOR">
-					<input v-model="Decor" value="6" type="radio" name="DECOR">
-					<br>
+					<template v-for="g in Groups" :key="g.code">
+						<input v-for="o in g.options" :key="o.id" v-model="Sel[g.code]" :value="o.id" type="radio" :name="g.code.toUpperCase()">
+						<br>
+					</template>
 					<input v-model="Words" type="text" name="WORDS">
 					<input v-model="Comments" type="text" name="COMMENTS">
 
@@ -252,13 +182,13 @@
 							<div class="col-12 col-lg-4 d-flex justify-content-center justify-content-lg-end">
 								<div class="cake__card p-4 position-relative cake_grey">
 									<span class="cake__badge rounded-pill">?</span>
-									<span>Количество уровней: {% verbatim %}{{ DATA.Levels[Levels] }}{% endverbatim %}</span>
-									<span>Форма уровней: {% verbatim %}{{ DATA.Forms[Form] }}{% endverbatim %}</span>
-									<p>Топинг: {% verbatim %}{{ DATA.Toppings[Topping] }}{% endverbatim %}</p>
+									<span>Количество уровней: {% verbatim %}{{ Label('levels') }}{% endverbatim %}</span>
+									<span>Форма уровней: {% verbatim %}{{ Label('form') }}{% endverbatim %}</span>
+									<p>Топинг: {% verbatim %}{{ Label('topping') }}{% endverbatim %}</p>
 									<span>Дополнительно:</span>
 									<ul>
-										<li>Ягоды: {% verbatim %}{{ DATA.Berries[Berries] }}{% endverbatim %}</li>
-										<li>Декор: {% verbatim %}{{ DATA.Decors[Decor] }}{% endverbatim %}</li>
+										<li>Ягоды: {% verbatim %}{{ Label('berries') }}{% endverbatim %}</li>
+										<li>Декор: {% verbatim %}{{ Label('decor') }}{% endverbatim %}</li>
 									</ul>
 									<span>{% verbatim %}{{ Words === '' ? 'Без надписи' : Words }}{% endverbatim %}</span>
 								</div>
@@ -270,6 +200,7 @@
 								<error-message name="address" class="from__alert"></error-message>
 								<error-message name="date" class="from__alert"></error-message>
 								<error-message name="time" class="from__alert"></error-message>
+								<small v-if="QuoteError" class="fs_12">{% verbatim %}{{ QuoteError }}{% endverbatim %}</small>
 							</span>
 						</div>
 
@@ -292,6 +223,7 @@
 							</div>
 							<div class="col-12 col-md-6 d-flex flex-column align-items-center align-items-md-end mt-3 mt-md-0">
 								<div class="d-flex">
+									<span v-if="IsRush" class="cake_pink align-self-center me-3">{% verbatim %}Срочный заказ, +{{ RushPercent }}%{% endverbatim %}</span>
 									<span class="cake_pink fs_40 fw-bold me-2">Итого: {% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
 								</div>
 								<button type="submit" class="btn btn_hover text-white rounded-pill mt-3 px-5 shadow-none cake__button cake__bg_pink">К оплате</button>

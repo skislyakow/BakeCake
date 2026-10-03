@@ -98,29 +98,16 @@ Vue.createApp({
                     return ' время доставки';
                 }
             },
-            DATA: {
-                Levels: ['не выбрано', '1', '2', '3'],
-                Forms: ['не выбрано', 'Круг', 'Квадрат', 'Прямоугольник'],
-                Toppings: ['не выбрано', 'Без', 'Белый соус', 'Карамельный', 'Кленовый', 'Черничный', 'Молочный шоколад', 'Клубничный'],
-                Berries: ['нет', 'Ежевика', 'Малина', 'Голубика', 'Клубника'],
-                Decors: [ 'нет', 'Фисташки', 'Безе', 'Фундук', 'Пекан', 'Маршмеллоу', 'Марципан']
-            },
-            Costs: {
-                Levels: [0, 400, 750, 1100],
-                Forms: [0, 600, 400, 1000],
-                Toppings: [0, 0, 200, 180, 200, 300, 350, 200],
-                Berries: [0, 400, 300, 450, 500],
-                Decors: [0, 300, 400, 350, 300, 200, 280],
-                Words: 500
-            },
-            Levels: 0,
-            Form: 0,
-            Topping: 0,
-            Berries: 0,
-            Decor: 0,
+            Config: null,
+            ConfigError: '',
+            Sel: {levels: 0, form: 0, topping: 0, berries: 0, decor: 0},
             Words: '',
             Comments: '',
             Designed: false,
+            Quote: null,
+            QuoteError: '',
+            QuoteTimer: null,
+            QuoteTicket: 0,
 
             Name: '',
             Phone: null,
@@ -132,17 +119,87 @@ Vue.createApp({
         }
     },
     methods: {
+        Label(code) {
+            const group = this.Groups.find(g => g.code === code)
+            const option = group && group.options.find(o => o.id === this.Sel[code])
+            return option ? option.title : 'не выбрано'
+        },
+        async RequestQuote(body) {
+            const ticket = (this.QuoteTicket = (this.QuoteTicket || 0) + 1)
+            const data = await api('/api/quote/', 'POST', body)
+            if (ticket !== this.QuoteTicket) return // пока шёл запрос, выбор уже поменялся
+            if (data.ok) {
+                this.Quote = data
+            } else {
+                this.Quote = null
+                this.QuoteError = firstError(data)
+            }
+        },
         ToStep4() {
             this.Designed = true
             setTimeout(() => this.$refs.ToStep4.click(), 0);
         }
     },
+    async mounted() {
+        const data = await api('/api/configurator/')
+        if (!data.ok) {
+            this.ConfigError = firstError(data)
+            return
+        }
+        this.Config = data
+    },
     computed: {
+        Groups() {
+            // имя поля и префикс id берутся из вёрстки макета: levels → lvls / num1, остальные = code
+            return this.Config ? this.Config.groups.map(g => ({
+                ...g,
+                field: g.code === 'levels' ? 'lvls' : g.code,
+                prefix: g.code === 'levels' ? 'num' : g.code
+            })) : []
+        },
+        Required() { return this.Groups.filter(g => g.is_required) },
+        Extra() { return this.Groups.filter(g => !g.is_required) },
+        Preview() {
+            // предварительная сумма, пока сервер не может посчитать (нет даты/времени или не всё выбрано)
+            if (!this.Config) return 0
+            let sum = 0
+            for (const g of this.Config.groups) {
+                const option = g.options.find(o => o.id === this.Sel[g.code])
+                if (option) sum += option.price_delta
+            }
+            if (this.Words.trim()) sum += this.Config.inscription_price
+            return sum
+        },
         Cost() {
-            let W = this.Words ? this.Costs.Words : 0
-            return this.Costs.Levels[this.Levels] + this.Costs.Forms[this.Form] +
-                this.Costs.Toppings[this.Topping] + this.Costs.Berries[this.Berries] +
-                this.Costs.Decors[this.Decor] + W
+            return this.Quote ? this.Quote.total : this.Preview
+        },
+        IsRush() {
+            return Boolean(this.Quote && this.Quote.is_rush)
+        },
+        RushPercent() {
+            return this.Config ? this.Config.delivery.rush_surcharge_percent : 0
+        },
+        QuoteBody() {
+            // null, пока серверу нечего считать: он требует все обязательные группы, дату и время
+            if (!this.Config || !this.Dates || !this.Time) return null
+            if (this.Config.groups.some(g => g.is_required && !this.Sel[g.code])) return null
+            return {
+                spec: {...this.Sel, inscription: this.Words.trim()},
+                delivery_date: this.Dates,
+                delivery_time: this.Time
+            }
+        }
+    },
+    watch: {
+        QuoteBody: {
+            handler(body) {
+                clearTimeout(this.QuoteTimer)
+                this.Quote = null
+                this.QuoteError = ''
+                if (!body) return
+                this.QuoteTimer = setTimeout(() => this.RequestQuote(body), 250)
+            },
+            deep: true
         }
     }
 }).mount('#VueApp')

@@ -9,6 +9,7 @@ from django.utils import timezone
 from rest_framework.decorators import api_view
 
 from config.responses import fail, ok
+from apps.analytics.views import _read_first_touch
 from apps.orders.models import Issue, Order, OrderEvent
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
@@ -241,6 +242,8 @@ def orders(request):
     if not request.session.session_key:
         request.session.create()
 
+    utm_source, utm_medium, utm_campaign = _read_first_touch(request)
+
     order = Order.objects.create(
         user=user,
         spec={k: v for k, v in (body.get("spec") or {}).items() if v not in (None, "", 0)},
@@ -259,7 +262,9 @@ def orders(request):
         pd_consent_at=timezone.now(),
         pd_consent_ip=_client_ip(request),
         pd_version=_pd_version(),
-        utm_source=request.COOKIES.get("bc_utm", ""),
+        utm_source=utm_source,
+        utm_medium=utm_medium,
+        utm_campaign=utm_campaign,
         session_key=request.session.session_key,
     )
     OrderEvent.objects.create(order=order, kind=OrderEvent.Kind.STATUS, text="Заказ создан")

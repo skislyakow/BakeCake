@@ -35,16 +35,26 @@ def _utm_field(request, name):
     return (value or "").strip()
 
 
-def _first_touch(request, response, utm_source):
-    if not request.COOKIES.get(BC_UTM_COOKIE) and utm_source:
+def _first_touch(request, response, utm_source, utm_medium="", utm_campaign=""):
+    if not request.COOKIES.get(BC_UTM_COOKIE) and (utm_source or utm_campaign):
+        value = f"{utm_source}|{utm_medium}|{utm_campaign}"
         response.set_cookie(
             BC_UTM_COOKIE,
-            utm_source,
+            value,
             max_age=BC_UTM_MAX_AGE,
             httponly=False,
             samesite="Lax",
         )
     return response
+
+
+def _read_first_touch(request):
+    value = request.COOKIES.get(BC_UTM_COOKIE, "") or ""
+    parts = value.split("|")
+    source = parts[0] if parts else ""
+    medium = parts[1] if len(parts) > 1 else ""
+    campaign = parts[2] if len(parts) > 2 else ""
+    return source, medium, campaign
 
 
 @api_view(["POST"])
@@ -75,7 +85,7 @@ def track_visit(request):
     )
 
     response = ok()
-    return _first_touch(request, response, utm_source)
+    return _first_touch(request, response, utm_source, utm_medium, utm_campaign)
 
 
 @api_view(["GET"])

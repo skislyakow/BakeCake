@@ -5,6 +5,8 @@ from apps.analytics.models import Visit
 
 @admin.register(Visit)
 class VisitAdmin(admin.ModelAdmin):
+    change_list_template = "admin/analytics/visit/change_list.html"
+
     list_display = (
         "created",
         "utm_source",

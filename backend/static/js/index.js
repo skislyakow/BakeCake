@@ -111,6 +111,7 @@ Vue.createApp({
             QuoteError: '',
             QuoteTimer: null,
             QuoteTicket: 0,
+            Promo: '',
             OrderError: '',
             OrderPlaced: '',
 
@@ -177,7 +178,8 @@ async FillProfile() {
                 delivery_date: this.Dates,
                 delivery_time: this.Time,
                 comment: this.Comments,
-                courier_comment: this.DelivComments
+                courier_comment: this.DelivComments,
+                promo_code: this.Promo
             }
             this.OrderError = ''
             this.OrderPlaced = ''
@@ -241,7 +243,8 @@ async FillProfile() {
             return {
                 spec: {...this.Sel, inscription: this.Words.trim()},
                 delivery_date: this.Dates,
-                delivery_time: this.Time
+                delivery_time: this.Time,
+                promo_code: this.Promo
             }
         }
     },

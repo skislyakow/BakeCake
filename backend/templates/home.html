@@ -205,10 +205,12 @@
 								<textarea v-model="DelivComments" :class="DelivComments ? 'cake__border_blue': ''" id="deliv-comment" class="form-control cake__textinput mt-3" rows="2" style="resize: none"></textarea>
 							</div>
 							<div class="col-12 col-md-6 d-flex flex-column align-items-center align-items-md-end mt-3 mt-md-0">
-								<div class="d-flex">
-									<span v-if="IsRush" class="cake_pink align-self-center me-3">{% verbatim %}Срочный заказ, +{{ RushPercent }}%{% endverbatim %}</span>
+								<div class="d-flex align-items-center">
+									<span v-if="IsRush" class="cake_pink align-self-center me-3">{% verbatim %}Срочный заказ, +{{ RushPercent }}% (+{{ Quote.rush_amount }}₽){% endverbatim %}</span>
+									<span v-if="Quote && Quote.discount" class="cake_pink align-self-center me-3">{% verbatim %}Скидка: −{{ Quote.discount }}₽{% endverbatim %}</span>
 									<span class="cake_pink fs_40 fw-bold me-2">Итого: {% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
 								</div>
+								<input v-model="Promo" placeholder="Промокод" class="form-control cake__textinput mt-3" style="max-width: 260px">
 								<button type="submit" class="btn btn_hover text-white rounded-pill mt-3 px-5 shadow-none cake__button cake__bg_pink">К оплате</button>
 								<small v-if="OrderError" class="fs_12 cake_pink mt-2 text-end">{% verbatim %}{{ OrderError }}{% endverbatim %}</small>
 								<small v-if="OrderPlaced" class="fs_12 cake_blue mt-2 text-end fw-bold">Заказ №{% verbatim %}{{ OrderPlaced }}{% endverbatim %} принят</small>

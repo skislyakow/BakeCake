@@ -85,7 +85,7 @@
 				<h2 class="font_Gogh fs_40 cake_blue text-center">Создать свой торт</h2>
 				<p v-if="ConfigError" class="cake_pink text-center">{% verbatim %}{{ ConfigError }}{% endverbatim %}</p>
 				<v-form :validation-schema="schema1" @submit="ToStep4">
-					<div class="d-flex justify-content-end align-items-center position-relative sticky-top bg-white" style="top: calc(58px + 1.6rem)">
+					<div class="d-flex justify-content-end align-items-center position-relative">
 				<span class="cake_pink position-absolute start-0 top-50">
 					<error-message name="lvls" class="from__alert"></error-message>
 					<error-message name="form" class="from__alert"></error-message>

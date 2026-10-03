@@ -26,10 +26,10 @@
 					</v-form>
 
 					<div class="modal-footer d-flex flex-column justify-content-between align-items-center text-center border-0 mx-5">
-						<p class="fs_12 cake_grey">
-						<input v-if="Step === 'Number'" v-model="Consent" type="checkbox" id="consent" name="consent" class="me-1" style="accent-color: #DA87A9">
-						<label for="consent" class="fs_12 cake_grey">{% verbatim %}{{Step === `Number` ? `Нажимая на кнопку, вы соглашаетесь на обработку персональных данных в соответствии с политикой конфиденциальности` : Step === 'Code' ? `Осталось времени: 05:00` : ``}}{% endverbatim %}</label>
-					</p>
+						<div class="d-flex align-items-start text-start fs_12 cake_grey" style="max-width:100%">
+						<input v-if="Step === 'Number'" v-model="Consent" type="checkbox" id="consent" name="consent" class="me-2 flex-shrink-0 mt-1" style="accent-color: #DA87A9">
+						<label for="consent" class="mb-0 fs_12 cake_grey">{% verbatim %}{{Step === `Number` ? `Нажимая на кнопку, вы соглашаетесь на обработку персональных данных в соответствии с политикой конфиденциальности` : Step === 'Code' ? `Осталось времени: 05:00` : ``}}{% endverbatim %}</label>
+					</div>
 						<a href="#" v-if="Step === `Code`" @click.prevent="ToRegStep1" class="text-decoration-none cake_pink fs_12">изменить данные</a>
 					</div>
 				</div>

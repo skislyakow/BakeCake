@@ -111,6 +111,8 @@ Vue.createApp({
             QuoteError: '',
             QuoteTimer: null,
             QuoteTicket: 0,
+            OrderError: '',
+            OrderPlaced: '',
 
             Name: '',
             Phone: null,
@@ -138,7 +140,7 @@ Vue.createApp({
                 this.QuoteError = firstError(data)
             }
         },
-        async FillProfile() {
+async FillProfile() {
             const me = await api('/api/me/')
             if (!me.ok) return
             this.Authed = true
@@ -164,6 +166,27 @@ Vue.createApp({
                     default_address: this.Address
                 })
             }, 600)
+        },
+        async SubmitOrder() {
+            const body = {
+                spec: {...this.Sel, inscription: this.Words.trim()},
+                name: this.Name,
+                phone: this.Phone,
+                email: this.Email,
+                address: this.Address,
+                delivery_date: this.Dates,
+                delivery_time: this.Time,
+                comment: this.Comments,
+                courier_comment: this.DelivComments
+            }
+            this.OrderError = ''
+            this.OrderPlaced = ''
+            const data = await api('/api/orders/', 'POST', body)
+            if (data.ok) {
+                this.OrderPlaced = data.number
+            } else {
+                this.OrderError = firstError(data)
+            }
         },
         ToStep4() {
             this.Designed = true

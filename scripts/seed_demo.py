@@ -19,6 +19,7 @@ from apps.orders.models import Order
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
 from apps.users.models import Profile, User
+from apps.users.utils import normalize_phone
 
 OPTION_GROUPS = [
     {
@@ -127,8 +128,9 @@ def seed_promo():
 
 
 def seed_admin():
+    phone = normalize_phone(DEMO_ADMIN["phone"])
     user, created = User.objects.get_or_create(
-        phone=DEMO_ADMIN["phone"],
+        phone=phone,
         defaults={"name": DEMO_ADMIN["name"]},
     )
     if created:
@@ -143,8 +145,9 @@ def seed_admin():
 
 
 def seed_customer():
+    phone = normalize_phone(DEMO_CUSTOMER["phone"])
     user, created = User.objects.get_or_create(
-        phone=DEMO_CUSTOMER["phone"],
+        phone=phone,
         defaults={"name": DEMO_CUSTOMER["name"], "email": DEMO_CUSTOMER["email"]},
     )
     Profile.objects.get_or_create(

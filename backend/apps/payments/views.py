@@ -52,7 +52,7 @@ def create_payment(request, order_id):
                 "capture": True,
                 "confirmation": {
                     "type": "redirect",
-                    "return_url": f"{settings.SITE_URL}/lk/?order={order.number}&paid=1",
+                    "return_url": f"{settings.SITE_URL}/orders/?order={order.number}&paid=1",
                 },
                 "description": f"Торт на заказ #{order.number}",
                 "metadata": {"order_id": order.pk, "order_number": order.number},

@@ -132,7 +132,7 @@ Vue.createApp({
             return option ? option.title : 'не выбрано'
         },
         ApplyRepeat() {
-            // «Повторить заказ» из ЛК кладёт spec прошлого заказа в sessionStorage (lk.js)
+            // «Повторить заказ» из «Мои заказы» кладёт spec прошлого заказа в sessionStorage (orders.js)
             let spec = null
             try {
                 const raw = sessionStorage.getItem('bc_repeat')

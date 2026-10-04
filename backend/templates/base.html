@@ -24,5 +24,8 @@
 {% block scripts %}{% endblock %}
 <script src="{% static 'js/track.js' %}?v=20261004"></script>
 <script src="{% static 'js/registration.js' %}?v=20261004"></script>
+{% if JIVO_SITE_ID %}
+<script src="//code.jivo.ru/widget/{{ JIVO_SITE_ID }}" async></script>
+{% endif %}
 </body>
 </html>

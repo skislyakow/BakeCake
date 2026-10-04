@@ -131,6 +131,27 @@ Vue.createApp({
             const option = group && group.options.find(o => o.id === this.Sel[code])
             return option ? option.title : 'не выбрано'
         },
+        ApplyRepeat() {
+            // «Повторить заказ» из ЛК кладёт spec прошлого заказа в sessionStorage (lk.js)
+            let spec = null
+            try {
+                const raw = sessionStorage.getItem('bc_repeat')
+                sessionStorage.removeItem('bc_repeat')
+                spec = raw ? JSON.parse(raw) : null
+            } catch (e) {
+                return
+            }
+            if (!spec || typeof spec !== 'object') return
+            for (const g of this.Config.groups) {
+                // опция могла исчезнуть из каталога с тех пор — тогда группу не трогаем
+                if (g.options.some(o => o.id === spec[g.code])) this.Sel[g.code] = spec[g.code]
+            }
+            if (typeof spec.inscription === 'string') this.Words = spec.inscription
+            this.$nextTick(() => {
+                const section = document.getElementById('step3')
+                if (section) section.scrollIntoView()
+            })
+        },
         async RequestQuote(body) {
             const ticket = (this.QuoteTicket = (this.QuoteTicket || 0) + 1)
             const data = await api('/api/quote/', 'POST', body)
@@ -233,6 +254,7 @@ async FillProfile() {
             return
         }
         this.Config = data
+        this.ApplyRepeat()
         await this.FillProfile()
         this.Hydrated = true
     },

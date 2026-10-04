@@ -175,6 +175,14 @@ Vue.createApp({
             }
             this.Catalog = data.items || []
         },
+        async LoadConfigurator() {
+            const data = await api('/api/configurator/')
+            if (!data.ok) {
+                this.ConfigError = firstError(data)
+                return
+            }
+            this.Config = data
+        },
         SelectCake(cake, scroll = true) {
             this.SelectedCake = cake
             this.Designed = true
@@ -310,18 +318,10 @@ async FillProfile() {
         }
     },
     async mounted() {
-        await Promise.all([this.LoadCatalog(), this._loadConfigurator()])
+        await Promise.all([this.LoadCatalog(), this.LoadConfigurator()])
         this.ApplyRepeat()
         await this.FillProfile()
         this.Hydrated = true
-    },
-    async _loadConfigurator() {
-        const data = await api('/api/configurator/')
-        if (!data.ok) {
-            this.ConfigError = firstError(data)
-            return
-        }
-        this.Config = data
     },
     computed: {
         Groups() {

@@ -56,12 +56,13 @@ python manage.py runserver
 | Генератор UTM-ссылок | в админке визитов `…campaign→ссылка` + колонка «Кампания» |
 | Нормализация телефона | `89090000000` и `+79090000000` — один и тот же аккаунт |
 | Личный кабинет | `/lk/` — профиль, история заказов, «Повторить заказ», жалоба (шаги 17–18) |
+| Оплата ЮKassa | `POST /api/payments/<id>/` → `confirmation_url` → виджет, вебхук `payment.succeeded` → статус «Оплачен» (шаг 14) |
 | Формат ответа заморожен | любой ответ — `{"ok": true, ...}`, ошибка — `{"ok": false, "errors": {...}}` |
 
-Всего **18 API-методов на 16 путях** (`config/urls.py`). Заглушками остаются:
-`POST /api/payments/<id>/` и вебхук ЮKassa (шаг 14 — бэкенд), `GET /api/admin/orders/`
-и `PATCH /api/admin/orders/<id>/` (шаги 19–20, см. «Известные проблемы»). Фронт
-`/api/quote/`, `/api/configurator/`, `/api/me/` и `/api/orders/` вызывает сам.
+Всего **19 API-методов на 17 путях** (`config/urls.py`). Заглушками остаются:
+`GET /api/admin/orders/` и `PATCH /api/admin/orders/<id>/` (шаги 19–20, см.
+«Известные проблемы»). Фронт `/api/quote/`, `/api/configurator/`, `/api/me/`,
+`/api/orders/` и `/api/payments/` вызывает сам.
 
 ## Известные проблемы
 
@@ -114,7 +115,7 @@ cp .env.example .env
 
 Без файла проект тоже запускается — у всех переменных в `settings.py` есть рабочие
 дефолты. Что лежит в `.env`: `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `SHOP_PHONE`,
-`YOO_SHOP_ID`, `YOO_SECRET_KEY`, `JIVO_SITE_ID`.
+`YOO_SHOP_ID`, `YOO_SECRET_KEY`, `SITE_URL`, `JIVO_SITE_ID`.
 
 Шаг 27 добавит сюда `AUTH_MODE` (`demo` или `flashcall`) и ключи Звонка™. На сервере
 режим остаётся `demo`, и на `main` этих переменных пока нет.
@@ -201,7 +202,7 @@ python ../scripts/seed_demo.py
 ```
 PLAN.md                 план и все решения — первоисточник
 README.md               этот файл
-requirements.txt        Django 5, DRF, python-dotenv
+requirements.txt        Django 5, DRF, python-dotenv, yookassa (SDK ЮKassa)
 requirements-dev.txt    django-stubs, pyright — только проверка типов
 requirements-server.txt gunicorn — только для сервера, подтягивает requirements.txt
 pyrightconfig.json      настройки проверки типов
@@ -216,7 +217,7 @@ backend/
 │   ├── catalog/       стандартные торты
 │   ├── pricing/       группы опций и цены             — ядро конструктора
 │   ├── orders/        заказы, статусы, жалобы
-│   ├── payments/      ЮKassa (бэкенд — заглушка, шаг 14)
+│   ├── payments/      ЮKassa: создание платежа, вебхук, статус «Оплачен» (шаг 14)
 │   ├── promo/         промокоды
 │   └── analytics/     визиты, UTM-атрибуция, генератор UTM-ссылок, сводка, CSV
 ├── templates/        base.html, home.html, lk.html, includes/  — вёрстка, шг. 4

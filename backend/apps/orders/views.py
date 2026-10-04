@@ -272,6 +272,7 @@ def orders(request):
 
     return ok(
         number=order.number,
+        order_id=order.pk,
         total=order.total,
         is_rush=order.is_rush,
         payment_url="",

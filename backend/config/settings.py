@@ -114,4 +114,5 @@ PD_VERSION = "1.0"
 SHOP_PHONE = os.environ.get("SHOP_PHONE", "8 (495) 000-00-00")
 YOO_SHOP_ID = os.environ.get("YOO_SHOP_ID", "")
 YOO_SECRET_KEY = os.environ.get("YOO_SECRET_KEY", "")
+SITE_URL = os.environ.get("SITE_URL", "https://bakecake.kislyakov.pro")
 JIVO_SITE_ID = os.environ.get("JIVO_SITE_ID", "")

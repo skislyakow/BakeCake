@@ -64,8 +64,32 @@ Vue.createApp({
             this.OrdersError = firstError(orders)
         }
         this.OrdersLoaded = true
+        this.HandleReturn()
     },
     methods: {
+        HandleReturn() {
+            const params = new URLSearchParams(location.search)
+            const number = params.get('order')
+            if (!number) return
+            const el = document.getElementById('OrderModal' + number)
+            if (el) {
+                bootstrap.Modal.getOrCreateInstance(el).show()
+                if (params.get('paid') === '1') this.PollUntilPaid(number)
+            }
+        },
+        async PollUntilPaid(number) {
+            // возврат с оплаты: статус меняет только вебхук, даём ему время (план, раздел 7)
+            for (let i = 0; i < 4; i++) {
+                await new Promise(r => setTimeout(r, 1500))
+                delete this.Detail[number]
+                const detail = await this.LoadDetail(number)
+                const order = this.Orders.find(o => o.number === number)
+                if (detail && detail.status === 'paid') {
+                    if (order) order.status = detail.status
+                    return
+                }
+            }
+        },
         async ApplyChanges() {
             this.ApiError = ''
             this.Saving = true

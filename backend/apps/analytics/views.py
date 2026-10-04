@@ -1,5 +1,4 @@
 from django.http import HttpResponse
-from django.shortcuts import render
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
 
@@ -36,16 +35,26 @@ def _utm_field(request, name):
     return (value or "").strip()
 
 
-def _first_touch(request, response, utm_source):
-    if not request.COOKIES.get(BC_UTM_COOKIE) and utm_source:
+def _first_touch(request, response, utm_source, utm_medium="", utm_campaign=""):
+    if not request.COOKIES.get(BC_UTM_COOKIE) and (utm_source or utm_campaign):
+        value = f"{utm_source}|{utm_medium}|{utm_campaign}"
         response.set_cookie(
             BC_UTM_COOKIE,
-            utm_source,
+            value,
             max_age=BC_UTM_MAX_AGE,
             httponly=False,
             samesite="Lax",
         )
     return response
+
+
+def _read_first_touch(request):
+    value = request.COOKIES.get(BC_UTM_COOKIE, "") or ""
+    parts = value.split("|")
+    source = parts[0] if parts else ""
+    medium = parts[1] if len(parts) > 1 else ""
+    campaign = parts[2] if len(parts) > 2 else ""
+    return source, medium, campaign
 
 
 @api_view(["POST"])
@@ -76,7 +85,7 @@ def track_visit(request):
     )
 
     response = ok()
-    return _first_touch(request, response, utm_source)
+    return _first_touch(request, response, utm_source, utm_medium, utm_campaign)
 
 
 @api_view(["GET"])
@@ -178,15 +187,3 @@ def export_stats_csv(request):
         for channel in data["channels"]
     ]
     return _csv_response("stats.csv", CSV_STATS_COLUMNS, rows)
-
-
-def summary(request):
-    from_date, to_date, utm_source = _date_params(request)
-    data = stats_helpers.build_stats(from_date, to_date, utm_source)
-    context = {
-        **data,
-        "date_from": from_date.isoformat() if from_date else "",
-        "date_to": to_date.isoformat() if to_date else "",
-        "utm_source_filter": utm_source or "",
-    }
-    return render(request, "analytics/summary.html", context)

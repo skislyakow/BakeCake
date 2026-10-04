@@ -85,7 +85,7 @@
 				<h2 class="font_Gogh fs_40 cake_blue text-center">Создать свой торт</h2>
 				<p v-if="ConfigError" class="cake_pink text-center">{% verbatim %}{{ ConfigError }}{% endverbatim %}</p>
 				<v-form :validation-schema="schema1" @submit="ToStep4">
-					<div class="d-flex justify-content-end align-items-center position-relative sticky-top bg-white" style="top: calc(58px + 1.6rem)">
+					<div class="d-flex justify-content-end align-items-center position-relative">
 				<span class="cake_pink position-absolute start-0 top-50">
 					<error-message name="lvls" class="from__alert"></error-message>
 					<error-message name="form" class="from__alert"></error-message>
@@ -129,24 +129,7 @@
 			</section>
 
 			<section class="row pt-header" id="step4" v-if="Designed">
-				<form class="d-none">
-					<template v-for="g in Groups" :key="g.code">
-						<input v-for="o in g.options" :key="o.id" v-model="Sel[g.code]" :value="o.id" type="radio" :name="g.code.toUpperCase()">
-						<br>
-					</template>
-					<input v-model="Words" type="text" name="WORDS">
-					<input v-model="Comments" type="text" name="COMMENTS">
-
-					<input v-model="Name" type="text" name="NAME">
-					<input v-model="Phone" type="tel" name="PHONE">
-					<input v-model="Email" type="email" name="EMAIL">
-					<input v-model="Address" type="text" name="ADDRESS">
-					<input v-model="Dates" type="date" name="DATE">
-					<input v-model="Time" type="time" name="TIME">
-					<input v-model="DelivComments" type="text" name="DELIVCOMMENTS">
-					<button type="submit" ref="HiddenFormSubmit">Submit Order</button>
-				</form>
-				<v-form :validation-schema="schema2" @submit="this.$refs.HiddenFormSubmit.click()">
+				<v-form :validation-schema="schema2" @submit="SubmitOrder">
 					<div class="col">
 						<div class="d-flex flex-column position-relative pb-5">
 							<h2 class="fs_40 font_Gogh cake_blue text-center align-self-center">Оформление заказа</h2>
@@ -222,11 +205,15 @@
 								<textarea v-model="DelivComments" :class="DelivComments ? 'cake__border_blue': ''" id="deliv-comment" class="form-control cake__textinput mt-3" rows="2" style="resize: none"></textarea>
 							</div>
 							<div class="col-12 col-md-6 d-flex flex-column align-items-center align-items-md-end mt-3 mt-md-0">
-								<div class="d-flex">
-									<span v-if="IsRush" class="cake_pink align-self-center me-3">{% verbatim %}Срочный заказ, +{{ RushPercent }}%{% endverbatim %}</span>
+								<div class="d-flex align-items-center">
+									<span v-if="IsRush" class="cake_pink align-self-center me-3">{% verbatim %}Срочный заказ, +{{ RushPercent }}% (+{{ Quote.rush_amount }}₽){% endverbatim %}</span>
+									<span v-if="Quote && Quote.discount" class="cake_pink align-self-center me-3">{% verbatim %}Скидка: −{{ Quote.discount }}₽{% endverbatim %}</span>
 									<span class="cake_pink fs_40 fw-bold me-2">Итого: {% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
 								</div>
-								<button type="submit" class="btn btn_hover text-white rounded-pill mt-3 px-5 shadow-none cake__button cake__bg_pink">К оплате</button>
+								<input v-model="Promo" placeholder="Промокод" class="form-control cake__textinput mt-3" style="max-width: 260px">
+								<button type="submit" :disabled="Submitting" class="btn btn_hover text-white rounded-pill mt-3 px-5 shadow-none cake__button cake__bg_pink">К оплате</button>
+								<small v-if="OrderError" class="fs_12 cake_pink mt-2 text-end">{% verbatim %}{{ OrderError }}{% endverbatim %}</small>
+								<small v-if="OrderPlaced" class="fs_12 cake_blue mt-2 text-end fw-bold">Заказ №{% verbatim %}{{ OrderPlaced }}{% endverbatim %} принят</small>
 							</div>
 						</div>
 					</div>

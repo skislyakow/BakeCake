@@ -1,4 +1,9 @@
+import html
+
 from django.contrib import admin
+from django.utils.html import mark_safe
+
+from apps.pricing.models import Option, OptionGroup
 
 from .models import Issue, Order, OrderEvent
 
@@ -34,7 +39,7 @@ class OrderAdmin(admin.ModelAdmin):
     )
     date_hierarchy = "delivery_date"
     ordering = ("delivery_date", "delivery_time")
-    readonly_fields = ("number", "created", "subtotal", "rush_amount", "is_rush")
+    readonly_fields = ("number", "created", "subtotal", "rush_amount", "is_rush", "spec_display")
     inlines = [OrderEventInline]
     fieldsets = (
         (
@@ -53,7 +58,7 @@ class OrderAdmin(admin.ModelAdmin):
         ),
         (
             "Что готовить",
-            {"fields": ("spec", "price_items", "subtotal", "is_rush", "rush_amount")},
+            {"fields": ("spec_display", "subtotal", "is_rush", "rush_amount")},
         ),
         (
             "Куда везти",
@@ -87,6 +92,71 @@ class OrderAdmin(admin.ModelAdmin):
             },
         ),
     )
+
+    @admin.display(description="состав заказа")
+    def spec_display(self, obj):
+        spec = obj.spec or {}
+        items = {
+            item.get("title"): item.get("price") or 0
+            for item in obj.price_items
+            if isinstance(item, dict) and item.get("title")
+        }
+        groups = {g.code: g for g in OptionGroup.objects.all()}
+        labels = {
+            "levels": "Количество уровней",
+            "form": "Форма торта",
+            "topping": "Топпинг",
+            "extra": "Дополнительно",
+            "inscription": "Надпись",
+        }
+        used = set()
+
+        def option_title(group, option_id):
+            option = None
+            if group:
+                option = Option.objects.filter(id=option_id, group=group).first()
+                if option is None:
+                    option = next(
+                        (
+                            candidate
+                            for candidate in group.options.all()
+                            if candidate.title in items and candidate.title not in used
+                        ),
+                        None,
+                    )
+            if option is None:
+                return f"#{option_id}"
+            used.add(option.title)
+            return option.title
+
+        lines = []
+        for code in ("levels", "form", "topping"):
+            value = spec.get(code)
+            if not value:
+                continue
+            group = groups.get(code)
+            title = option_title(group, value)
+            lines.append(f"{labels[code]}: {title} — {items.get(title, 0)} ₽")
+
+        extras = []
+        for code in ("berries", "decor"):
+            value = spec.get(code)
+            if not value:
+                continue
+            group = groups.get(code)
+            title = option_title(group, value)
+            extras.append(f"{group.title}: {title} — {items.get(title, 0)} ₽")
+        if extras:
+            lines.append(labels["extra"])
+            lines.extend(f"    {line}" for line in extras)
+
+        inscription = spec.get("inscription")
+        if inscription:
+            lines.append(f"{labels['inscription']}: {inscription} — {items.get('Надпись', 0)} ₽")
+
+        if not lines:
+            return mark_safe("—")
+        return mark_safe("<br>".join(html.escape(line) for line in lines))
 
     @admin.display(description="телефон", ordering="user__phone")
     def user_phone(self, obj):

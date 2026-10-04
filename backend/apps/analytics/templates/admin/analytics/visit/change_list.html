@@ -1,0 +1,158 @@
+{% extends "admin/change_list.html" %}
+{% load i18n static links %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+.campaign-generator {
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--body-bg);
+}
+.campaign-generator h2 {
+    margin: 0 0 12px;
+    font-size: 0.8125rem;
+    color: var(--body-quiet-color);
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+.campaign-form {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 12px;
+}
+.campaign-field label {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.8125rem;
+    color: var(--body-fg);
+}
+.campaign-field input {
+    min-width: 220px;
+    padding: 6px 10px;
+    font-size: 0.8125rem;
+    color: var(--body-fg);
+    background: var(--body-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+.campaign-generator .submit-row,
+.campaign-generator button {
+    margin: 0;
+    padding: 7px 14px;
+    font-size: 0.8125rem;
+    color: var(--header-link-color);
+    background: var(--header-bg);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.campaign-result {
+    margin-top: 12px;
+    display: none;
+}
+.campaign-result.visible {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+.campaign-result a {
+    color: var(--link-fg);
+    word-break: break-all;
+}
+.campaign-table {
+    margin-top: 14px;
+}
+.campaign-table th,
+.campaign-table td {
+    padding: 6px 12px;
+}
+.campaign-table td.num {
+    text-align: right;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module campaign-generator">
+    <h2>{% translate "Ссылки для кампаний" %}</h2>
+    <div class="campaign-form">
+        <div class="campaign-field">
+            <label for="campaign-source">{% translate "Название сайта источника" %}</label>
+            <input id="campaign-source" type="text" placeholder="Например: Instagram">
+        </div>
+        <div class="campaign-field">
+            <label for="campaign-name">{% translate "Название кампании" %}</label>
+            <input id="campaign-name" type="text" placeholder="Например: летняя_акция">
+        </div>
+        <button type="button" class="default" onclick="BCCampaignGenerate()">{% translate "Получить ссылку" %}</button>
+    </div>
+    <div class="campaign-result" id="campaign-result">
+        <a id="campaign-link" href="#" target="_blank" rel="noopener"></a>
+        <button type="button" onclick="BCCampaignCopy()">{% translate "Скопировать" %}</button>
+    </div>
+    <div class="campaign-table">
+        <h2>{% translate "Переходы по ссылкам" %}</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>{% translate "Источник" %}</th>
+                    <th>{% translate "Кампания" %}</th>
+                    <th class="num">{% translate "Визиты" %}</th>
+                    <th class="num">{% translate "Заказы" %}</th>
+                    <th class="num">{% translate "Выручка" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% campaign_link_rows as link_rows %}
+                {% for row in link_rows %}
+                <tr>
+                    <td>{{ row.source }}</td>
+                    <td>{{ row.campaign }}</td>
+                    <td class="num">{{ row.visits }}</td>
+                    <td class="num">{{ row.orders }}</td>
+                    <td class="num">{{ row.revenue|floatformat:0 }}&nbsp;&#8381;</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">{% translate "Пока нет ни одного перехода по ссылкам" %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{{ block.super }}
+
+<script>
+const BC_TRANSLIT = {'а':'a','б':'b','в':'v','г':'g','д':'d','е':'e','ё':'e','ж':'zh','з':'z','и':'i','й':'y','к':'k','л':'l','м':'m','н':'n','о':'o','п':'p','р':'r','с':'s','т':'t','у':'u','ф':'f','х':'h','ц':'ts','ч':'ch','ш':'sh','щ':'sch','ъ':'','ы':'y','ь':'','э':'e','ю':'yu','я':'ya'};
+function BCTranslit(value) {
+    return String(value || '').toLowerCase().split('').map(function (ch) {
+        return BC_TRANSLIT[ch] || ch;
+    }).join('');
+}
+function BCSlug(value) {
+    return BCTranslit(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+function BCCampaignGenerate() {
+    const source = BCSlug(document.getElementById('campaign-source').value);
+    const campaign = BCSlug(document.getElementById('campaign-name').value);
+    const link = window.location.origin + '/?utm_source=' + encodeURIComponent(source) + '&utm_medium=referral&utm_campaign=' + encodeURIComponent(campaign);
+    const anchor = document.getElementById('campaign-link');
+    anchor.href = link;
+    anchor.textContent = link;
+    document.getElementById('campaign-result').classList.add('visible');
+}
+function BCCampaignCopy() {
+    const anchor = document.getElementById('campaign-link');
+    navigator.clipboard.writeText(anchor.href).catch(function () {
+        window.prompt('{% translate "Скопируйте ссылку" %}:', anchor.href);
+    });
+}
+</script>
+{% endblock %}

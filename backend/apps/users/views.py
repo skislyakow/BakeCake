@@ -6,13 +6,14 @@ from django.contrib.auth import (
 )
 from config.responses import fail, ok
 from .models import Profile
+from .utils import normalize_phone
 
 User = get_user_model()
 
 
 @api_view(["POST"])
 def login(request):
-    phone = (request.data.get("phone") or "").strip()
+    phone = normalize_phone(request.data.get("phone"))
     if not phone:
         return fail({"phone": "Введите номер телефона"})
     user, _ = User.objects.get_or_create(phone=phone)

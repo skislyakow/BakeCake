@@ -8,11 +8,11 @@
 					<div class="modal-header border-0 py-0">
 						<label for="reg" class="modal-title font_Gogh fs_40 cake_blue" id="RegModalLabel">Вход / Регистрация</label>
 					</div>
-					<v-form :validation-schema="RegSchema" class="modal-body position-relative d-flex flex-column align-items-center px-5 pb-4" @submit="RegSubmit">
+					<v-form :validation-schema="RegSchema" class="modal-body position-relative d-flex flex-column align-items-center px-5 pb-2" @submit="RegSubmit">
 						<v-field v-if="RegInput !== 'Регистрация успешна'" v-model="RegInput" name="reg" type="text" id="reg" :placeholder="Step === `Number` ? `Введите ваш номер` : `Введите код`" class="form-control cake__textinput"></v-field>
 						<v-field v-if="Step === 'Number'" v-model="RegInput" type="phone" name="phone_format" class="d-none"></v-field>
 						<v-field v-if="Step === 'Code'" v-model="RegInput" type="phone" name="code_format" class="d-none"></v-field>
-						<button v-if="RegInput !== 'Регистрация успешна'" type="submit" class="btn text-white w-100 rounded-pill mt-3 py-2 shadow-none cake__button fs_12 cake__bg_pink">Отправить</button>
+						<button v-if="RegInput !== 'Регистрация успешна'" type="submit" class="btn text-white w-100 rounded-pill mt-2 py-2 shadow-none cake__button fs_12 cake__bg_pink">Отправить</button>
 						<span v-if="RegInput === 'Регистрация успешна'" class="cake_grey text-center">Регистрация успешна</span>
 						<small class="fs_12 cake_pink text-center position-absolute bottom-0"><error-message name="reg">
 							<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-exclamation-circle mb-1" viewBox="0 0 16 16">
@@ -22,14 +22,14 @@
 							{% verbatim %}{{Step === 'Number' ? 'Введите номер' : 'Введите код'}}{% endverbatim %}</error-message></small>
 						<error-message name="phone_format" class="fs_12 cake_pink text-center position-absolute bottom-0"></error-message>
 						<error-message name="code_format" class="fs_12 cake_pink text-center position-absolute bottom-0"></error-message>
-						<small v-if="ApiError" class="fs_12 cake_pink text-center position-absolute bottom-0">{% verbatim %}{{ ApiError }}{% endverbatim %}</small>
+						<small v-if="ApiError" class="fs_12 cake_pink text-center mt-2">{% verbatim %}{{ ApiError }}{% endverbatim %}</small>
 					</v-form>
 
 					<div class="modal-footer d-flex flex-column justify-content-between align-items-center text-center border-0 mx-5">
-						<p class="fs_12 cake_grey">
-						<input v-if="Step === 'Number'" v-model="Consent" type="checkbox" id="consent" name="consent" class="me-1" style="accent-color: #DA87A9">
-						<label for="consent" class="fs_12 cake_grey">{% verbatim %}{{Step === `Number` ? `Нажимая на кнопку, вы соглашаетесь на обработку персональных данных в соответствии с политикой конфиденциальности` : Step === 'Code' ? `Осталось времени: 05:00` : ``}}{% endverbatim %}</label>
-					</p>
+						<div class="d-flex align-items-start text-start fs_12 cake_grey" style="max-width:100%">
+						<input v-if="Step === 'Number'" v-model="Consent" type="checkbox" id="consent" name="consent" class="me-2 flex-shrink-0 mt-1" style="accent-color: #DA87A9">
+						<label for="consent" class="mb-0 fs_12 cake_grey">{% verbatim %}{{Step === `Number` ? `Нажимая на кнопку, вы соглашаетесь на обработку персональных данных в соответствии с политикой конфиденциальности` : Step === 'Code' ? `Осталось времени: 05:00` : ``}}{% endverbatim %}</label>
+					</div>
 						<a href="#" v-if="Step === `Code`" @click.prevent="ToRegStep1" class="text-decoration-none cake_pink fs_12">изменить данные</a>
 					</div>
 				</div>

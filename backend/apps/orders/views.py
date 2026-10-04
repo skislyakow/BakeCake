@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view
 
 from config.responses import fail, ok
 from apps.analytics.views import _read_first_touch
+from apps.catalog.models import Cake
 from apps.orders.models import Issue, Order, OrderEvent
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
@@ -33,10 +34,13 @@ def _as_date(value):
         return None
 
 
-def _calculate(spec, delivery_date, delivery_time, promo_code=""):
-    """Валидирует спецификацию и сроки доставки, считает сумму. Возвращает
-    (данные для ok, errors-словарь). Ровно одна из двух частей непустая."""
-    if not isinstance(spec, dict):
+def _calculate(spec, delivery_date, delivery_time, promo_code="", cake=None):
+    """Валидирует спецификацию (или готовый торт) и сроки доставки, считает сумму.
+    Возвращает (данные для ok, errors-словарь). Ровно одна из двух частей непустая.
+
+    cake — готовый торт из каталога: при нём spec игнорируется, цена = cake.price.
+    """
+    if cake is None and not isinstance(spec, dict):
         return None, {"spec": "Ожидается объект вида {код группы: id опции}"}
 
     missing = {}
@@ -64,43 +68,46 @@ def _calculate(spec, delivery_date, delivery_time, promo_code=""):
     if delivery_d < timezone.localdate():
         return None, {"delivery_date": "Дата доставки не может быть в прошлом"}
 
-    chosen = {code: value for code, value in spec.items() if value not in (None, "", 0)}
+    if cake is not None:
+        items = [{"title": cake.name, "price": cake.price, "cake": cake.id}]
+    else:
+        chosen = {code: value for code, value in spec.items() if value not in (None, "", 0)}
 
-    groups = {g.code: g for g in OptionGroup.objects.all()}
+        groups = {g.code: g for g in OptionGroup.objects.all()}
 
-    items = []
-    errors = {}
-    for code, value in chosen.items():
-        if code == "inscription":
-            if not isinstance(value, str):
-                errors["inscription"] = "Надпись должна быть строкой"
-            elif value.strip():
-                items.append({"title": "Надпись", "price": settings.INSCRIPTION_PRICE})
-            continue
+        items = []
+        errors = {}
+        for code, value in chosen.items():
+            if code == "inscription":
+                if not isinstance(value, str):
+                    errors["inscription"] = "Надпись должна быть строкой"
+                elif value.strip():
+                    items.append({"title": "Надпись", "price": settings.INSCRIPTION_PRICE})
+                continue
 
-        group = groups.get(code)
-        if not group:
-            errors[code] = "Неизвестная группа опций"
-            continue
+            group = groups.get(code)
+            if not group:
+                errors[code] = "Неизвестная группа опций"
+                continue
 
-        if isinstance(value, bool) or not isinstance(value, int):
-            errors[code] = f"Ожидается id опции для группы «{group.title}»"
-            continue
+            if isinstance(value, bool) or not isinstance(value, int):
+                errors[code] = f"Ожидается id опции для группы «{group.title}»"
+                continue
 
-        try:
-            option = Option.objects.get(id=value, group=group, is_available=True)
-        except Option.DoesNotExist:
-            errors[code] = f"Опция с id={value} не найдена"
-            continue
+            try:
+                option = Option.objects.get(id=value, group=group, is_available=True)
+            except Option.DoesNotExist:
+                errors[code] = f"Опция с id={value} не найдена"
+                continue
 
-        items.append({"title": option.title, "price": option.price_delta})
+            items.append({"title": option.title, "price": option.price_delta})
 
-    not_chosen = sorted(g.title for g in groups.values() if g.is_required and g.code not in chosen)
-    if not_chosen:
-        errors["spec"] = "Не выбрано: " + ", ".join(not_chosen)
+        not_chosen = sorted(g.title for g in groups.values() if g.is_required and g.code not in chosen)
+        if not_chosen:
+            errors["spec"] = "Не выбрано: " + ", ".join(not_chosen)
 
-    if errors:
-        return None, errors
+        if errors:
+            return None, errors
 
     subtotal = sum(item["price"] for item in items)
 
@@ -138,11 +145,13 @@ def _calculate(spec, delivery_date, delivery_time, promo_code=""):
 
 @api_view(["POST"])
 def quote(request):
+    cake = _get_cake_or_none(request.data.get("cake_id"))
     data, errors = _calculate(
         request.data.get("spec"),
         request.data.get("delivery_date"),
         request.data.get("delivery_time"),
         request.data.get("promo_code"),
+        cake=cake,
     )
     if errors:
         return fail(errors)
@@ -183,6 +192,15 @@ def _serialize(order, full=False):
     return data
 
 
+def _get_cake_or_none(cake_id):
+    if cake_id in (None, ""):
+        return None
+    try:
+        return Cake.objects.get(pk=int(cake_id), is_active=True)
+    except (TypeError, ValueError, Cake.DoesNotExist):
+        return None
+
+
 def _user_order_or_fail(request, number):
     if not request.user.is_authenticated:
         return fail({"auth": "Не авторизован"}), None
@@ -213,11 +231,13 @@ def orders(request):
     if not phone:
         return fail({"phone": "Введите номер телефона"})
 
+    cake = _get_cake_or_none(body.get("cake_id"))
     data, errors = _calculate(
         body.get("spec"),
         body.get("delivery_date"),
         body.get("delivery_time"),
         body.get("promo_code"),
+        cake=cake,
     )
     if errors:
         return fail(errors)
@@ -247,7 +267,9 @@ def orders(request):
 
     order = Order.objects.create(
         user=user,
-        spec={k: v for k, v in (body.get("spec") or {}).items() if v not in (None, "", 0)},
+        spec={"cake": cake.id} if cake is not None else {  # pyright: ignore[reportAttributeAccessIssue]
+            k: v for k, v in (body.get("spec") or {}).items() if v not in (None, "", 0)
+        },
         price_items=data["items"],
         subtotal=data["subtotal"],
         total=data["total"],

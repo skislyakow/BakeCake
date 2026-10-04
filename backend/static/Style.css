@@ -88,6 +88,21 @@ li .cake__textinput:read-only {
     flex-direction: column;
     max-width: 255px;
 }
+.catalog-enter-active {
+    transition: all 0.3s ease;
+    max-height: 1000px;
+    overflow: hidden;
+}
+.catalog-leave-active {
+    transition: all 0.2s ease;
+    max-height: 40px;
+    overflow: hidden;
+}
+.catalog-enter-from,
+.catalog-leave-to {
+    max-height: 0;
+    opacity: 0;
+}
 .cake__badge {
     position: absolute;
     border: 1px solid #8C99AA;

@@ -100,6 +100,10 @@ Vue.createApp({
             },
             Config: null,
             ConfigError: '',
+            Catalog: [],
+            CatalogError: '',
+            CatalogOpen: false,
+            SelectedCake: null,
             Authed: false,
             Hydrated: false,
             SaveTimer: null,
@@ -142,11 +146,51 @@ Vue.createApp({
                 return
             }
             if (!spec || typeof spec !== 'object') return
+            if (typeof spec.cake === 'number') {
+                const cake = this.Catalog.find(c => c.id === spec.cake)
+                if (cake) {
+                    this.SelectCake(cake, false)
+                    this.$nextTick(() => {
+                        const section = document.getElementById('step4')
+                        if (section) section.scrollIntoView()
+                    })
+                }
+                return
+            }
             for (const g of this.Config.groups) {
                 // опция могла исчезнуть из каталога с тех пор — тогда группу не трогаем
                 if (g.options.some(o => o.id === spec[g.code])) this.Sel[g.code] = spec[g.code]
             }
             if (typeof spec.inscription === 'string') this.Words = spec.inscription
+            this.$nextTick(() => {
+                const section = document.getElementById('step3')
+                if (section) section.scrollIntoView()
+            })
+        },
+        async LoadCatalog() {
+            const data = await api('/api/catalog/')
+            if (!data.ok) {
+                this.CatalogError = firstError(data)
+                return
+            }
+            this.Catalog = data.items || []
+        },
+        SelectCake(cake, scroll = true) {
+            this.SelectedCake = cake
+            this.Designed = true
+            this.Quote = null
+            this.QuoteError = ''
+            if (scroll) {
+                this.$nextTick(() => {
+                    const section = document.getElementById('step4')
+                    if (section) section.scrollIntoView()
+                })
+            }
+        },
+        ClearCake() {
+            this.SelectedCake = null
+            this.Quote = null
+            this.QuoteError = ''
             this.$nextTick(() => {
                 const section = document.getElementById('step3')
                 if (section) section.scrollIntoView()
@@ -196,8 +240,7 @@ async FillProfile() {
             this.OrderError = ''
             this.OrderPlaced = ''
             try {
-                const data = await api('/api/orders/', 'POST', {
-                    spec: {...this.Sel, inscription: this.Words.trim()},
+                const payload = {
                     name: this.Name,
                     phone: this.Phone,
                     email: this.Email,
@@ -207,7 +250,13 @@ async FillProfile() {
                     comment: this.Comments,
                     courier_comment: this.DelivComments,
                     promo_code: this.Promo
-                })
+                }
+                if (this.SelectedCake) {
+                    payload.cake_id = this.SelectedCake.id
+                } else {
+                    payload.spec = {...this.Sel, inscription: this.Words.trim()}
+                }
+                const data = await api('/api/orders/', 'POST', payload)
                 if (data.ok) {
                     this.OrderPlaced = data.number
                     this.ResetForms()
@@ -236,6 +285,8 @@ async FillProfile() {
             this.Promo = ''
             this.Quote = null
             this.QuoteError = ''
+            this.SelectedCake = null
+            this.CatalogOpen = false
             this.Dates = null
             this.Time = null
             this.Name = ''
@@ -251,20 +302,26 @@ async FillProfile() {
             }
         },
         ToStep4() {
+            this.SelectedCake = null
+            this.Quote = null
+            this.QuoteError = ''
             this.Designed = true
-            setTimeout(() => this.$refs.ToStep4.click(), 0);
+            setTimeout(() => this.$refs.ToStep4.click(), 0)
         }
     },
     async mounted() {
+        await Promise.all([this.LoadCatalog(), this._loadConfigurator()])
+        this.ApplyRepeat()
+        await this.FillProfile()
+        this.Hydrated = true
+    },
+    async _loadConfigurator() {
         const data = await api('/api/configurator/')
         if (!data.ok) {
             this.ConfigError = firstError(data)
             return
         }
         this.Config = data
-        this.ApplyRepeat()
-        await this.FillProfile()
-        this.Hydrated = true
     },
     computed: {
         Groups() {
@@ -289,7 +346,9 @@ async FillProfile() {
             return sum
         },
         Cost() {
-            return this.Quote ? this.Quote.total : this.Preview
+            if (this.Quote) return this.Quote.total
+            if (this.SelectedCake) return this.SelectedCake.price
+            return this.Preview
         },
         IsRush() {
             return Boolean(this.Quote && this.Quote.is_rush)
@@ -298,9 +357,18 @@ async FillProfile() {
             return this.Config ? this.Config.delivery.rush_surcharge_percent : 0
         },
         QuoteBody() {
-            // null, пока серверу нечего считать: он требует все обязательные группы, дату и время
-            if (!this.Config || !this.Dates || !this.Time) return null
-            if (this.Config.groups.some(g => g.is_required && !this.Sel[g.code])) return null
+            // null, пока серверу нечего считать: для готового торта нужны дата и время,
+            // для своего — ещё и все обязательные группы
+            if (!this.Dates || !this.Time) return null
+            if (this.SelectedCake) {
+                return {
+                    cake_id: this.SelectedCake.id,
+                    delivery_date: this.Dates,
+                    delivery_time: this.Time,
+                    promo_code: this.Promo
+                }
+            }
+            if (!this.Config || this.Config.groups.some(g => g.is_required && !this.Sel[g.code])) return null
             return {
                 spec: {...this.Sel, inscription: this.Words.trim()},
                 delivery_date: this.Dates,

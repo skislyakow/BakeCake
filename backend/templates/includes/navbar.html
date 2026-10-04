@@ -29,7 +29,7 @@
 					<a class="nav-link fw-lighter me-1 cake_blue position-relative" href="{% url 'orders' %}">
 						<img src="{% static 'img/shopping-cart.svg' %}" alt="">
 						<!--метка на иконке, убрать класс d-none чтоб появилась-->
-						<span id="cart-badge" class="position-absolute translate-middle badge rounded-pill cake__bg_pink fs_8 d-none">0</span>
+						<span id="cart-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill cake__bg_pink fs_8 d-none">0</span>
 					</a>
 					<a class="nav-link fw-lighter me-1 cake_blue position-relative" {% if user.is_authenticated %}href="/lk/"{% else %}href="#RegModal" data-bs-toggle="modal"{% endif %}>
 						<img src="{% static 'img/user.svg' %}" alt="">

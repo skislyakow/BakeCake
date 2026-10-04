@@ -211,6 +211,14 @@ async FillProfile() {
                 if (data.ok) {
                     this.OrderPlaced = data.number
                     this.ResetForms()
+                    try {
+                        const pay = await api(`/api/payments/${data.order_id}/`, 'POST')
+                        if (pay.ok && pay.confirmation_url) {
+                            window.location.href = pay.confirmation_url
+                        }
+                    } catch (e) {
+                        // платёж не удалось создать — заказ принят, оплатить можно позже в ЛК
+                    }
                 } else {
                     this.OrderError = firstError(data)
                 }

@@ -23,6 +23,7 @@ urlpatterns = [
     path("api/orders/<str:number>/issue/", order_views.order_issue, name="api-order-issue"),
     path("api/payments/<int:order_id>/", payment_views.create_payment, name="api-payment"),
     path("api/yookassa/webhook/", payment_views.webhook, name="api-yookassa-webhook"),
+    path("payments/webhook/", payment_views.webhook, name="payments-webhook"),
     path("api/track/visit/", analytics_views.track_visit, name="api-track-visit"),
     path("api/admin/orders/", analytics_views.admin_orders, name="api-admin-orders"),
     path("api/admin/orders/<int:order_id>/", analytics_views.admin_order_patch, name="api-admin-order"),

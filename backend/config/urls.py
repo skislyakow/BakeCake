@@ -7,10 +7,12 @@ from apps.orders import views as order_views
 from apps.payments import views as payment_views
 from apps.pricing import views as pricing_views
 from apps.users import views as user_views
+from config import pages
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", TemplateView.as_view(template_name="home.html"), name="home"),
+    path("lk/", pages.lk, name="lk"),
     path("api/auth/login/", user_views.login, name="api-login"),
     path("api/auth/logout/", user_views.logout, name="api-logout"),
     path("api/me/", user_views.me, name="api-me"),

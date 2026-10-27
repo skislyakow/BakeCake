@@ -1,17 +1,21 @@
 from datetime import datetime, timedelta
 
 from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
 
 from apps.catalog.models import Cake
-from apps.orders.models import OrderEvent
+from apps.orders.models import Order, OrderEvent
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
 from apps.users.models import Profile
 from apps.users.utils import normalize_phone
 
 from .errors import OrderIntakeError
-from .types import CakeChoice, CustomChoice, PricingRules, Quote
+from .types import CakeChoice, CustomChoice, PlacedOrder, PricingRules, Quote
+
+User = get_user_model()
 
 
 def _get_rules(now=None):
@@ -182,3 +186,79 @@ def price_order(draft, rules=None, now=None):
 def quote(draft, rules=None, now=None):
     q = price_order(draft, rules, now)
     return q
+
+
+def place_order(draft, context, rules=None):
+    if rules is None:
+        rules = _rules_from_settings()
+
+    now = context.now if getattr(context, "now", None) is not None else timezone.now()
+    q = _price_order(draft, rules, now)
+
+    phone = normalize_phone(draft.phone) or normalize_phone(getattr(context.actor, "phone", "") if getattr(context, "actor", None) else "")
+    if not phone:
+        raise OrderIntakeError({"phone": "Введите номер телефона"})
+
+    attribution = getattr(context, "attribution", ("", "", "")) or ("", "", "")
+    utm_source, utm_medium, utm_campaign = attribution[0], attribution[1], attribution[2]
+
+    if getattr(q.promo, "pk", None):
+        promo = q.promo
+    else:
+        promo = None
+
+    from .types import CakeChoice, CustomChoice
+
+    if isinstance(draft.selection, CakeChoice):
+        spec = {"cake": draft.selection.cake_id}
+    elif isinstance(draft.selection, CustomChoice):
+        spec = {k: v for k, v in (draft.selection.spec or {}).items() if v not in (None, "", 0)}
+    else:
+        spec = {k: v for k, v in (getattr(draft.selection, "spec", None) or draft.spec_raw or {}).items() if v not in (None, "", 0)}
+
+    address = (draft.address or "").strip()
+    comment = (draft.comment or "").strip()
+    courier_comment = (draft.courier_comment or "").strip()
+
+    with transaction.atomic():
+        user, _ = User.objects.get_or_create(phone=phone)
+        name = (draft.name or "").strip()
+        email = (draft.email or "").strip()
+        if name:
+            user.name = name
+        if email:
+            user.email = email
+        user.save()
+
+        profile, _ = Profile.objects.get_or_create(user=user)
+        if address:
+            profile.default_address = address
+            profile.save()
+
+        order = Order.objects.create(
+            user=user,
+            spec=spec,
+            price_items=q.items,
+            subtotal=q.subtotal,
+            total=q.total,
+            discount=q.discount,
+            promo=promo,
+            delivery_date=q.delivery_date,
+            delivery_time=q.delivery_time,
+            is_rush=q.is_rush,
+            rush_amount=q.rush_amount,
+            address=address,
+            comment=comment,
+            courier_comment=courier_comment,
+            pd_consent_at=now,
+            pd_consent_ip=(getattr(context, "ip", "") or ""),
+            pd_version=(getattr(context, "pd_version", "") or ""),
+            utm_source=utm_source,
+            utm_medium=utm_medium,
+            utm_campaign=utm_campaign,
+            session_key=(getattr(context, "session_key", "") or ""),
+        )
+        OrderEvent.objects.create(order=order, kind=OrderEvent.Kind.STATUS, text="Заказ создан")
+
+    return PlacedOrder(order=order, quote=q)
+

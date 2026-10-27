@@ -234,71 +234,26 @@ def orders(request):
         draft = intake.parse_draft(body)
         now = timezone.now()
         rules = intake_pricing._rules_from_settings()
-        q = intake.price_order(draft, rules=rules, now=now)
+        if not request.session.session_key:
+            request.session.create()
+        utm_source, utm_medium, utm_campaign = _read_first_touch(request)
+        ctx = intake.RequestContext(
+            ip=_client_ip(request),
+            session_key=request.session.session_key or "",
+            actor=request.user if getattr(request.user, "is_authenticated", False) else None,
+            attribution=(utm_source, utm_medium, utm_campaign),
+            pd_version=_pd_version(),
+            now=now,
+        )
+        placed = intake.place_order(draft, ctx, rules=rules)
+        user = placed.order.user
     except OrderIntakeError as exc:
         return fail(exc.errors)
-
-    user, _ = User.objects.get_or_create(phone=phone)
-    name = (body.get("name") or "").strip()
-    email = (body.get("email") or "").strip()
-    if name:
-        user.name = name
-    if email:
-        user.email = email
-    user.save()
-
-    profile, _ = Profile.objects.get_or_create(user=user)
-    address = (body.get("address") or "").strip()
-    if address:
-        profile.default_address = address
-        profile.save()
 
     if not request.user.is_authenticated or request.user.id != user.id:
         auth_login(request, user)
 
-    if not request.session.session_key:
-        request.session.create()
-
-    utm_source, utm_medium, utm_campaign = _read_first_touch(request)
-
-    if getattr(q.promo, "pk", None):
-        promo = q.promo
-    else:
-        promo = None
-
-    from apps.orders.intake.types import CakeChoice, CustomChoice
-
-    if isinstance(draft.selection, CakeChoice):
-        spec = {"cake": draft.selection.cake_id}
-    elif isinstance(draft.selection, CustomChoice):
-        spec = {k: v for k, v in (draft.selection.spec or {}).items() if v not in (None, "", 0)}
-    else:
-        spec = {k: v for k, v in (getattr(draft.selection, "spec", None) or draft.spec_raw or {}).items() if v not in (None, "", 0)}
-
-    order = Order.objects.create(
-        user=user,
-        spec=spec,
-        price_items=q.items,
-        subtotal=q.subtotal,
-        total=q.total,
-        discount=q.discount,
-        promo=promo,
-        delivery_date=q.delivery_date,
-        delivery_time=q.delivery_time,
-        is_rush=q.is_rush,
-        rush_amount=q.rush_amount,
-        address=address,
-        comment=(body.get("comment") or "").strip(),
-        courier_comment=(body.get("courier_comment") or "").strip(),
-        pd_consent_at=timezone.now(),
-        pd_consent_ip=_client_ip(request),
-        pd_version=_pd_version(),
-        utm_source=utm_source,
-        utm_medium=utm_medium,
-        utm_campaign=utm_campaign,
-        session_key=request.session.session_key,
-    )
-    OrderEvent.objects.create(order=order, kind=OrderEvent.Kind.STATUS, text="Заказ создан")
+    order = placed.order
 
     return ok(
         number=order.number,

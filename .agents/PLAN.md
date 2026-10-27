@@ -60,6 +60,19 @@
 в воскресенье на человеке не из команды — если отказы будут, предпросмотр вернём
 отдельной задачей.
 
+### Архитектурный аудит (27.10.2026)
+
+Выбран кандидат 1 — глубокий модуль приёма заказа `apps/orders/intake/`. Границы зафиксированы в ходе grilling:
+
+- **Структура:** `parse_draft(payload)`, `quote(draft, rules, now)`, `place_order(draft, context, rules)` в пакете `backend/apps/orders/intake/` (`__init__.py`, `draft.py`, `pricing.py`, `errors.py`, `types.py`).
+- **Контракт:** `OrderDraft`, `OrderSelection = CakeChoice | CustomChoice`, `PricingRules`, `RequestContext(ip, session_key, actor, attribution, pd_version, now)`, `Quote`, `PlacedOrder(order, quote)`, `OrderIntakeError(errors: dict[str, str])`.
+- **Разделение:** `parse_draft` — только wire→типы. Доменная валидация, расчёт цены, срочность, промо, required groups — в intake. `price_order`/расчёт используют `now` явно. HTTP-контекст собирается в view.
+- **Транзакционность:** `place_order` оборачивает User/Profile, Order, OrderEvent в `transaction.atomic()`. Возвращает `PlacedOrder`; авто-логин и `session.create()` остаются в view.
+- **Провода:** URL, JSON-ключи, формат `{ok, errors}`, HTTP-статусы, `payment_url=""` заморожены. Невалидный `cake_id` -> `CustomChoice(spec)`, как сейчас.
+- **Миграция:** двухшаговый strangler. Шаг 1 — `price_order` + HTTP-characterization тесты для quote/orders; оба view используют модуль. Шаг 2 — `place_order`, перенос создания заказа.
+- **Тесты:** `pytest` + `pytest-django` в `requirements-dev.txt`. Сначала characterization, потом интерфейсные. `SECRET_KEY` в тестах задаётся отдельно.
+- **Вне скоупа:** платежи, аналитика/выручка, `users.identify_customer` (сейчас приватный хелпер), другие кандидаты аудита.
+
 ---
 
 ## ТЗ — исходное техническое задание

@@ -2,3 +2,5 @@
 
 django-stubs==6.1.1
 pyright==1.1.414
+pytest==8.3.4
+pytest-django==4.9.0

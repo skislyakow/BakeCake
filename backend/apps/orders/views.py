@@ -16,6 +16,9 @@ from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
 from apps.users.utils import normalize_phone
 from apps.users.models import Profile
+from apps.orders import intake
+from apps.orders.intake import OrderIntakeError
+from apps.orders.intake import pricing as intake_pricing
 
 User = get_user_model()
 
@@ -145,25 +148,21 @@ def _calculate(spec, delivery_date, delivery_time, promo_code="", cake=None):
 
 @api_view(["POST"])
 def quote(request):
-    cake = _get_cake_or_none(request.data.get("cake_id"))
-    data, errors = _calculate(
-        request.data.get("spec"),
-        request.data.get("delivery_date"),
-        request.data.get("delivery_time"),
-        request.data.get("promo_code"),
-        cake=cake,
-    )
-    if errors:
-        return fail(errors)
-
-    return ok(
-        items=data["items"],
-        subtotal=data["subtotal"],
-        is_rush=data["is_rush"],
-        rush_amount=data["rush_amount"],
-        discount=data["discount"],
-        total=data["total"],
-    )
+    try:
+        draft = intake.parse_draft(request.data)
+        now = timezone.now()
+        rules = intake_pricing._rules_from_settings()
+        q = intake.price_order(draft, rules=rules, now=now)
+        return ok(
+            items=q.items,
+            subtotal=q.subtotal,
+            is_rush=q.is_rush,
+            rush_amount=q.rush_amount,
+            discount=q.discount,
+            total=q.total,
+        )
+    except OrderIntakeError as exc:
+        return fail(exc.errors)
 
 def _spec_labels(order):
     return [item["title"] for item in order.price_items if isinstance(item, dict) and item.get("title")]
@@ -231,16 +230,13 @@ def orders(request):
     if not phone:
         return fail({"phone": "Введите номер телефона"})
 
-    cake = _get_cake_or_none(body.get("cake_id"))
-    data, errors = _calculate(
-        body.get("spec"),
-        body.get("delivery_date"),
-        body.get("delivery_time"),
-        body.get("promo_code"),
-        cake=cake,
-    )
-    if errors:
-        return fail(errors)
+    try:
+        draft = intake.parse_draft(body)
+        now = timezone.now()
+        rules = intake_pricing._rules_from_settings()
+        q = intake.price_order(draft, rules=rules, now=now)
+    except OrderIntakeError as exc:
+        return fail(exc.errors)
 
     user, _ = User.objects.get_or_create(phone=phone)
     name = (body.get("name") or "").strip()
@@ -265,20 +261,32 @@ def orders(request):
 
     utm_source, utm_medium, utm_campaign = _read_first_touch(request)
 
+    if getattr(q.promo, "pk", None):
+        promo = q.promo
+    else:
+        promo = None
+
+    from apps.orders.intake.types import CakeChoice, CustomChoice
+
+    if isinstance(draft.selection, CakeChoice):
+        spec = {"cake": draft.selection.cake_id}
+    elif isinstance(draft.selection, CustomChoice):
+        spec = {k: v for k, v in (draft.selection.spec or {}).items() if v not in (None, "", 0)}
+    else:
+        spec = {k: v for k, v in (getattr(draft.selection, "spec", None) or draft.spec_raw or {}).items() if v not in (None, "", 0)}
+
     order = Order.objects.create(
         user=user,
-        spec={"cake": cake.id} if cake is not None else {  # pyright: ignore[reportAttributeAccessIssue]
-            k: v for k, v in (body.get("spec") or {}).items() if v not in (None, "", 0)
-        },
-        price_items=data["items"],
-        subtotal=data["subtotal"],
-        total=data["total"],
-        discount=data["discount"],
-        promo=data["promo"],
-        delivery_date=data["delivery_date"],
-        delivery_time=data["delivery_time"],
-        is_rush=data["is_rush"],
-        rush_amount=data["rush_amount"],
+        spec=spec,
+        price_items=q.items,
+        subtotal=q.subtotal,
+        total=q.total,
+        discount=q.discount,
+        promo=promo,
+        delivery_date=q.delivery_date,
+        delivery_time=q.delivery_time,
+        is_rush=q.is_rush,
+        rush_amount=q.rush_amount,
         address=address,
         comment=(body.get("comment") or "").strip(),
         courier_comment=(body.get("courier_comment") or "").strip(),

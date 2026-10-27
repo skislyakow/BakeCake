@@ -1,27 +1,38 @@
-import os
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 from django.db.backends.signals import connection_created
-from dotenv import load_dotenv
+from environs import Env, EnvError
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-load_dotenv(BASE_DIR.parent / ".env")
+env = Env()
+env.read_env(BASE_DIR.parent / ".env")
 
-DEV_SECRET_KEY = "dev-insecure-key-change-me-in-production"
-SECRET_KEY = os.environ.get("SECRET_KEY", DEV_SECRET_KEY)
-DEBUG = os.environ.get("DEBUG", "1") == "1"
+SECRET_KEY_ERROR = (
+    "SECRET_KEY is required: add it to .env or the environment. Generate with: "
+    "python -c \"from django.core.management.utils import "
+    "get_random_secret_key; print(get_random_secret_key())\""
+)
+try:
+    SECRET_KEY = env.str("SECRET_KEY")
+except EnvError as exc:
+    raise ImproperlyConfigured(SECRET_KEY_ERROR) from exc
+if not SECRET_KEY.strip():
+    raise ImproperlyConfigured(SECRET_KEY_ERROR)
 
-if not DEBUG and SECRET_KEY == DEV_SECRET_KEY:
-    raise ImproperlyConfigured(
-        "SECRET_KEY is not set: fill it in .env before running with DEBUG=0. "
-        "Generate with: python -c \"from django.core.management.utils import "
-        "get_random_secret_key; print(get_random_secret_key())\""
-    )
+
+def env_bool(name: str, default: bool = False) -> bool:
+    """Treat an empty environment variable as unset, otherwise parse it strictly."""
+    if not env.str(name, "").strip():
+        return default
+    return env.bool(name)
+
+
+DEBUG = env_bool("DEBUG")
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    for host in env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
     if host.strip()
 ]
 INSTALLED_APPS = [
@@ -112,8 +123,8 @@ LEAD_TIME_HOURS = 24
 RUSH_SURCHARGE_PERCENT = 20
 INSCRIPTION_PRICE = 500
 PD_VERSION = "1.0"
-SHOP_PHONE = os.environ.get("SHOP_PHONE", "8 (495) 000-00-00")
-YOO_SHOP_ID = os.environ.get("YOO_SHOP_ID", "")
-YOO_SECRET_KEY = os.environ.get("YOO_SECRET_KEY", "")
-SITE_URL = os.environ.get("SITE_URL", "https://bakecake.kislyakov.pro")
-JIVO_SITE_ID = os.environ.get("JIVO_SITE_ID", "")
+SHOP_PHONE = env.str("SHOP_PHONE", "8 (495) 000-00-00")
+YOO_SHOP_ID = env.str("YOO_SHOP_ID", "")
+YOO_SECRET_KEY = env.str("YOO_SECRET_KEY", "")
+SITE_URL = env.str("SITE_URL", "https://bakecake.kislyakov.pro")
+JIVO_SITE_ID = env.str("JIVO_SITE_ID", "")

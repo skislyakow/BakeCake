@@ -1,4 +1,4 @@
-// Общий помощник для обращений к API. Формат ответа — {ok, errors|error, ...} (PLAN.md, раздел 4.1).
+// Общий помощник для обращений к API. Формат ответа — {ok, errors|error, ...} (.agents/PLAN.md, раздел 4.1).
 function csrfToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.content : '';

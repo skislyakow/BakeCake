@@ -1,5 +1,5 @@
 // Трекинг визитов: при загрузке страницы считывает UTM-метки из URL
-// и отправляет POST /api/track/visit/ (PLAN.md, раздел «Атрибуция рекламы»).
+// и отправляет POST /api/track/visit/ (.agents/PLAN.md, раздел «Атрибуция рекламы»).
 (function () {
     if (window.__bcTrackDone) return;
     window.__bcTrackDone = true;

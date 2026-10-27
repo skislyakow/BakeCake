@@ -34,3 +34,7 @@ Thumbs.db
 .DS_Store
 __MACOSX/
 ._*
+
+# Локальные навыки агента (mattpocock/skills) — не часть проекта, не коммитятся
+.agents/skills/
+skills-lock.json

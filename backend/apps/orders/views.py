@@ -1,5 +1,3 @@
-from datetime import date, datetime, time, timedelta
-
 from django.conf import settings
 from django.contrib.auth import (
     get_user_model,
@@ -10,140 +8,13 @@ from rest_framework.decorators import api_view
 
 from config.responses import fail, ok
 from apps.analytics.views import _read_first_touch
-from apps.catalog.models import Cake
-from apps.orders.models import Issue, Order, OrderEvent
-from apps.pricing.models import Option, OptionGroup
-from apps.promo.models import PromoCode
+from apps.orders.models import Issue, Order
 from apps.users.utils import normalize_phone
-from apps.users.models import Profile
 from apps.orders import intake
 from apps.orders.intake import OrderIntakeError
 from apps.orders.intake import pricing as intake_pricing
 
 User = get_user_model()
-
-
-def _as_time(value):
-    try:
-        return time.fromisoformat(str(value).strip())
-    except (ValueError, TypeError):
-        return None
-
-
-def _as_date(value):
-    try:
-        return date.fromisoformat(str(value).strip())
-    except (ValueError, TypeError):
-        return None
-
-
-def _calculate(spec, delivery_date, delivery_time, promo_code="", cake=None):
-    """Валидирует спецификацию (или готовый торт) и сроки доставки, считает сумму.
-    Возвращает (данные для ok, errors-словарь). Ровно одна из двух частей непустая.
-
-    cake — готовый торт из каталога: при нём spec игнорируется, цена = cake.price.
-    """
-    if cake is None and not isinstance(spec, dict):
-        return None, {"spec": "Ожидается объект вида {код группы: id опции}"}
-
-    missing = {}
-    if not delivery_date:
-        missing["delivery_date"] = "Укажите дату доставки"
-    if not delivery_time:
-        missing["delivery_time"] = "Укажите время доставки"
-    if missing:
-        return None, missing
-
-    delivery_t = _as_time(delivery_time)
-    if delivery_t is None:
-        return None, {"delivery_time": "Неверный формат времени, ожидается ЧЧ:ММ"}
-
-    window_from = _as_time(settings.DELIVERY_FROM)
-    window_to = _as_time(settings.DELIVERY_TO)
-    if not (window_from <= delivery_t <= window_to):
-        return None, {
-            "delivery_time": f"Доставка работает с {settings.DELIVERY_FROM} до {settings.DELIVERY_TO}"
-        }
-
-    delivery_d = _as_date(delivery_date)
-    if delivery_d is None:
-        return None, {"delivery_date": "Неверный формат даты, ожидается ГГГГ-ММ-ДД"}
-    if delivery_d < timezone.localdate():
-        return None, {"delivery_date": "Дата доставки не может быть в прошлом"}
-
-    if cake is not None:
-        items = [{"title": cake.name, "price": cake.price, "cake": cake.id}]
-    else:
-        chosen = {code: value for code, value in spec.items() if value not in (None, "", 0)}
-
-        groups = {g.code: g for g in OptionGroup.objects.all()}
-
-        items = []
-        errors = {}
-        for code, value in chosen.items():
-            if code == "inscription":
-                if not isinstance(value, str):
-                    errors["inscription"] = "Надпись должна быть строкой"
-                elif value.strip():
-                    items.append({"title": "Надпись", "price": settings.INSCRIPTION_PRICE})
-                continue
-
-            group = groups.get(code)
-            if not group:
-                errors[code] = "Неизвестная группа опций"
-                continue
-
-            if isinstance(value, bool) or not isinstance(value, int):
-                errors[code] = f"Ожидается id опции для группы «{group.title}»"
-                continue
-
-            try:
-                option = Option.objects.get(id=value, group=group, is_available=True)
-            except Option.DoesNotExist:
-                errors[code] = f"Опция с id={value} не найдена"
-                continue
-
-            items.append({"title": option.title, "price": option.price_delta})
-
-        not_chosen = sorted(g.title for g in groups.values() if g.is_required and g.code not in chosen)
-        if not_chosen:
-            errors["spec"] = "Не выбрано: " + ", ".join(not_chosen)
-
-        if errors:
-            return None, errors
-
-    subtotal = sum(item["price"] for item in items)
-
-    delivery_dt = timezone.make_aware(datetime.combine(delivery_d, delivery_t))
-    is_rush = delivery_dt < timezone.now() + timedelta(hours=settings.LEAD_TIME_HOURS)
-
-    rush_amount = 0
-    if is_rush:
-        rush_amount = round(subtotal * settings.RUSH_SURCHARGE_PERCENT / 100)
-
-    promo = None
-    discount = 0
-    code = (promo_code or "").strip()
-    if code:
-        try:
-            promo = PromoCode.objects.get(code__iexact=code, active=True)
-        except PromoCode.DoesNotExist:
-            return None, {"promo_code": "Промокод не найден или неактивен"}
-        discount = round((subtotal + rush_amount) * promo.percent / 100)
-
-    total = subtotal + rush_amount - discount
-
-    return {
-        "items": items,
-        "subtotal": subtotal,
-        "is_rush": is_rush,
-        "rush_amount": rush_amount,
-        "discount": discount,
-        "total": total,
-        "promo": promo,
-        "delivery_date": delivery_d,
-        "delivery_time": delivery_t,
-    }, None
 
 
 @api_view(["POST"])
@@ -191,13 +62,7 @@ def _serialize(order, full=False):
     return data
 
 
-def _get_cake_or_none(cake_id):
-    if cake_id in (None, ""):
-        return None
-    try:
-        return Cake.objects.get(pk=int(cake_id), is_active=True)
-    except (TypeError, ValueError, Cake.DoesNotExist):
-        return None
+
 
 
 def _user_order_or_fail(request, number):

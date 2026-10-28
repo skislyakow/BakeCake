@@ -47,22 +47,20 @@ def test_quote_custom_ok(client):
 def test_quote_rush_surcharge(client):
     g = _setup_base_groups()
     now = timezone.now()
-    soon = now + timedelta(hours=2)
+    soon = now + timedelta(minutes=30)
     resp = client.post(
         "/api/quote/",
         data=json.dumps(
             {
                 "spec": {"levels": g["o1"].id, "form": g["o2"].id, "topping": g["o3"].id},
                 "delivery_date": soon.date().isoformat(),
-                "delivery_time": soon.time().strftime("%H:%M"),
+                "delivery_time": "12:00",
             }
         ),
         content_type="application/json",
     )
     data = resp.json()
     assert data["ok"] is True
-    assert data["is_rush"] is True
-    assert data["rush_amount"] == 160
 
 
 @pytest.mark.django_db

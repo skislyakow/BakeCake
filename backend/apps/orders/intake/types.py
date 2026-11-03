@@ -1,20 +1,19 @@
-from dataclasses import dataclass
-from datetime import date, time, datetime
-from typing import Optional, Any
+from dataclasses import dataclass, field
+from datetime import date, datetime, time
+from typing import Any
 
 from apps.orders.models import Order
+from apps.promo.models import PromoCode
 
 
 @dataclass(frozen=True)
 class CakeChoice:
     cake_id: int
-    kind: str = "cake"
 
 
 @dataclass(frozen=True)
 class CustomChoice:
     spec: dict[str, Any]
-    kind: str = "custom"
 
 
 OrderSelection = CakeChoice | CustomChoice
@@ -47,7 +46,7 @@ class Quote:
     rush_amount: int
     discount: int
     total: int
-    promo: Any = None
+    promo: PromoCode | None = None
     delivery_date: date | None = None
     delivery_time: time | None = None
 
@@ -65,7 +64,7 @@ class OrderDraft:
     comment: str = ""
     courier_comment: str = ""
     cake_id_raw: Any = None
-    spec_raw: dict[str, Any] | None = None
+    spec_raw: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)

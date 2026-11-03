@@ -1,8 +1,5 @@
 from django.conf import settings
-from django.contrib.auth import (
-    get_user_model,
-    login as auth_login,
-)
+from django.contrib.auth import login as auth_login
 from django.utils import timezone
 from rest_framework.decorators import api_view
 
@@ -12,18 +9,13 @@ from apps.orders.models import Issue, Order
 from apps.users.utils import normalize_phone
 from apps.orders import intake
 from apps.orders.intake import OrderIntakeError
-from apps.orders.intake import pricing as intake_pricing
-
-User = get_user_model()
 
 
 @api_view(["POST"])
 def quote(request):
     try:
         draft = intake.parse_draft(request.data)
-        now = timezone.now()
-        rules = intake_pricing._rules_from_settings()
-        q = intake.price_order(draft, rules=rules, now=now)
+        q = intake.price_order(draft, now=timezone.now())
         return ok(
             items=q.items,
             subtotal=q.subtotal,
@@ -34,6 +26,7 @@ def quote(request):
         )
     except OrderIntakeError as exc:
         return fail(exc.errors)
+
 
 def _spec_labels(order):
     return [item["title"] for item in order.price_items if isinstance(item, dict) and item.get("title")]
@@ -98,7 +91,6 @@ def orders(request):
     try:
         draft = intake.parse_draft(body)
         now = timezone.now()
-        rules = intake_pricing._rules_from_settings()
         if not request.session.session_key:
             request.session.create()
         utm_source, utm_medium, utm_campaign = _read_first_touch(request)
@@ -110,7 +102,7 @@ def orders(request):
             pd_version=_pd_version(),
             now=now,
         )
-        placed = intake.place_order(draft, ctx, rules=rules)
+        placed = intake.place_order(draft, ctx)
         user = placed.order.user
     except OrderIntakeError as exc:
         return fail(exc.errors)

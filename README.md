@@ -167,7 +167,15 @@ python manage.py check
 python manage.py makemigrations --check --dry-run
 ```
 
-Проверка типов — отдельный набор зависимостей:
+Тесты:
+
+```bash
+pip install -r requirements-dev.txt
+cd backend
+python -m pytest
+```
+
+Проверка типов — тот же набор зависимостей:
 
 ```bash
 pip install -r requirements-dev.txt

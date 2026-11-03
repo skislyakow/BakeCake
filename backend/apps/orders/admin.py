@@ -1,7 +1,7 @@
 import html
 
 from django.contrib import admin
-from django.utils.html import mark_safe
+from django.utils.safestring import mark_safe
 
 from apps.pricing.models import Option, OptionGroup
 
@@ -145,7 +145,8 @@ class OrderAdmin(admin.ModelAdmin):
                 continue
             group = groups.get(code)
             title = option_title(group, value)
-            extras.append(f"{group.title}: {title} — {items.get(title, 0)} ₽")
+            group_title = group.title if group is not None else code
+            extras.append(f"{group_title}: {title} — {items.get(title, 0)} ₽")
         if extras:
             lines.append(labels["extra"])
             lines.extend(f"    {line}" for line in extras)

@@ -1,14 +1,11 @@
 from rest_framework.decorators import api_view
 from django.contrib.auth import (
-    get_user_model,
     login as auth_login,
     logout as auth_logout,
 )
 from config.responses import fail, ok
-from .models import Profile
+from .models import Profile, User
 from .utils import normalize_phone
-
-User = get_user_model()
 
 
 @api_view(["POST"])

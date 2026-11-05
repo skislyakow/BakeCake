@@ -66,13 +66,16 @@
 
 - **Структура:** `parse_draft(payload)`, `parse_rules()`, `price_order(draft, rules=None, now=None)`, `place_order(draft, context, rules=None)` в пакете `backend/apps/orders/intake/` (`__init__.py`, `draft.py`, `pricing.py`, `errors.py`, `types.py`).
 - **Контракт:** `OrderDraft`, `OrderSelection = CakeChoice | CustomChoice`, `PricingRules`, `RequestContext(ip, session_key, actor, attribution, pd_version, now)`, `Quote`, `PlacedOrder(order, quote)`, `OrderIntakeError(errors: dict[str, str])`.
-- **Разделение:** `parse_draft` — только wire→типы, без обращения к БД. Доменная валидация, расчёт цены, срочность, промо, required groups — в intake. `price_order`/расчёт используют `now` явно. HTTP-контекст собирается в view.
+- **Разделение:** `parse_draft` — только wire→типы, без обращения к БД: рядом с типизированными значениями хранит исходные строки даты/времени (`delivery_date_raw`, `delivery_time_raw`), чтобы intake мог отличить «поле не прислали» от «прислали мусор» и вернуть тот же текст ошибки, что и раньше. Доменная валидация, расчёт цены, срочность, промо, required groups — в intake. `price_order`/расчёт используют `now` явно (включая проверку прошедшей даты через `timezone.localdate(now)`). HTTP-контекст собирается в view.
+- **Порядок ошибок:** как в исходном `_calculate` — сначала слот доставки (оба пустых поля сразу, затем формат времени, окно, формат даты, прошедшая дата), потом состав заказа, потом промокод. Это часть замороженного контракта.
 - **Один расчёт на два входа:** `price_order` и `place_order` идут через общий `_price`, который возвращает `Quote` и `spec` для сохранения в заказе — цены и сохраняемый состав не могут разойтись.
 - **Транзакционность:** `place_order` оборачивает User/Profile, Order, OrderEvent в `transaction.atomic()`. Возвращает `PlacedOrder`; авто-логин и `session.create()` остаются в view.
-- **Провода:** URL, JSON-ключи, формат `{ok, errors}`, HTTP-статусы, `payment_url=""` заморожены. Невалидный/неактивный `cake_id` -> расчёт по `spec`, как сейчас.
+- **Телефон:** `place_order` берёт номер из заявки, иначе из `context.actor` (залогиненный покупатель), и валидирует его до расчёта цены — ошибка `{"phone": ...}` приходит раньше ошибок состава, как в старом view.
+- **Провода:** URL, JSON-ключи, формат `{ok, errors}`, HTTP-статусы, `payment_url=""` заморожены. Невалидный/неактивный `cake_id` -> расчёт по `spec`, как сейчас. Числовой телефон в JSON (`89001234567`) принимается как раньше.
 - **Миграция:** двухшаговый strangler. Шаг 1 — `price_order` + HTTP-characterization тесты для quote/orders; оба view используют модуль. Шаг 2 — `place_order`, перенос создания заказа.
-- **Тесты:** `pytest` + `pytest-django` + `pytest-env` в `requirements-dev.txt`, конфиг `backend/pytest.ini`. Сначала characterization (`tests/test_orders_char.py`), потом интерфейсные (`tests/test_intake_interface.py`). `SECRET_KEY` в тестах задаётся отдельно.
+- **Тесты:** `pytest` + `pytest-django` + `pytest-env` в `requirements-dev.txt`, конфиг `backend/pytest.ini`. Сначала characterization (`tests/test_orders_char.py`), потом интерфейсные (`tests/test_intake_interface.py`). `SECRET_KEY` в тестах задаётся отдельно. Часы в тестах на срочность подменяются через `monkeypatch`, чтобы не зависеть от времени запуска.
 - **Вне скоупа:** платежи, аналитика/выручка, `users.identify_customer` (сейчас приватный хелпер), другие кандидаты аудита.
+- **Ревью (05.11.2026):** после двухосевого ревью вернули точный порядок и тексты ошибок слота доставки, проверку прошедшей даты привязали к `now`, `place_order` стал единственным местом проверки телефона, `parse_rules` переехал из `draft.py` в `pricing.py`, а characterization-тест на срочность снова проверяет `is_rush`/`rush_amount` (с подменой часов). Правки типов вне intake (`admin.py`, `pricing/views.py`, `users/*`) — только чтобы `python -m pyright` был зелёным.
 
 ---
 

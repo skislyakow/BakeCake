@@ -129,6 +129,9 @@ class OrderAdmin(admin.ModelAdmin):
             used.add(option.title)
             return option.title
 
+        def group_title(group, code):
+            return group.title if group is not None else code
+
         lines = []
         for code in ("levels", "form", "topping"):
             value = spec.get(code)
@@ -136,7 +139,7 @@ class OrderAdmin(admin.ModelAdmin):
                 continue
             group = groups.get(code)
             title = option_title(group, value)
-            lines.append(f"{labels[code]}: {title} — {items.get(title, 0)} ₽")
+            lines.append(f"{group_title(group, labels[code])}: {title} — {items.get(title, 0)} ₽")
 
         extras = []
         for code in ("berries", "decor"):
@@ -145,8 +148,7 @@ class OrderAdmin(admin.ModelAdmin):
                 continue
             group = groups.get(code)
             title = option_title(group, value)
-            group_title = group.title if group is not None else code
-            extras.append(f"{group_title}: {title} — {items.get(title, 0)} ₽")
+            extras.append(f"{group_title(group, code)}: {title} — {items.get(title, 0)} ₽")
         if extras:
             lines.append(labels["extra"])
             lines.extend(f"    {line}" for line in extras)

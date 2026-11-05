@@ -26,4 +26,5 @@ cd backend
 python manage.py check
 python manage.py makemigrations --check --dry-run
 python -m pyright
+python -m pytest
 ```

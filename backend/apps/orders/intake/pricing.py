@@ -1,6 +1,7 @@
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
@@ -11,12 +12,12 @@ from apps.promo.models import PromoCode
 from apps.users.models import Profile, User
 from apps.users.utils import normalize_phone
 
-from .draft import parse_rules
 from .errors import OrderIntakeError
 from .types import (
     CakeChoice,
     CustomChoice,
     OrderDraft,
+    OrderSelection,
     PlacedOrder,
     PricingRules,
     Quote,
@@ -26,14 +27,24 @@ from .types import (
 SPEC_ERROR = "Ожидается объект вида {код группы: id опции}"
 
 
+def parse_rules() -> PricingRules:
+    """Собирает правила расчёта из настроек проекта."""
+    return PricingRules(
+        delivery_from=time.fromisoformat(settings.DELIVERY_FROM),
+        delivery_to=time.fromisoformat(settings.DELIVERY_TO),
+        lead_time_hours=int(settings.LEAD_TIME_HOURS),
+        rush_surcharge_percent=int(settings.RUSH_SURCHARGE_PERCENT),
+        inscription_price=int(settings.INSCRIPTION_PRICE),
+    )
+
+
 def _spec_items(spec: dict[str, Any], inscription_price: int) -> list[dict[str, Any]]:
     """Считает позиции заказа по выбранным опциям. Raises OrderIntakeError."""
-    chosen = _clean_spec(spec)
     groups = {group.code: group for group in OptionGroup.objects.all()}
 
     items: list[dict[str, Any]] = []
     errors: dict[str, str] = {}
-    for code, value in chosen.items():
+    for code, value in spec.items():
         if code == "inscription":
             if not isinstance(value, str):
                 errors["inscription"] = "Надпись должна быть строкой"
@@ -58,7 +69,7 @@ def _spec_items(spec: dict[str, Any], inscription_price: int) -> list[dict[str, 
 
         items.append({"title": option.title, "price": option.price_delta})
 
-    not_chosen = sorted(group.title for group in groups.values() if group.is_required and group.code not in chosen)
+    not_chosen = sorted(group.title for group in groups.values() if group.is_required and group.code not in spec)
     if not_chosen:
         errors["spec"] = "Не выбрано: " + ", ".join(not_chosen)
 
@@ -73,7 +84,7 @@ def _clean_spec(spec: dict[str, Any]) -> dict[str, Any]:
 
 
 def _selection(
-    selection: Any,
+    selection: OrderSelection,
     spec_raw: dict[str, Any],
     inscription_price: int,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
@@ -87,21 +98,25 @@ def _selection(
         return _spec_items(spec, inscription_price), spec
 
     if isinstance(selection, CustomChoice):
-        spec = _clean_spec(selection.spec or {})
+        spec = _clean_spec(selection.spec)
         return _spec_items(spec, inscription_price), spec
 
     raise OrderIntakeError({"spec": SPEC_ERROR})
 
 
-def _delivery_moment(draft: OrderDraft, rules: PricingRules) -> tuple[date, time, datetime]:
-    if draft.delivery_date is None:
-        raise OrderIntakeError({"delivery_date": "Укажите дату доставки"})
+def _delivery_moment(draft: OrderDraft, rules: PricingRules, now: datetime) -> tuple[date, time, datetime]:
+    missing = {}
+    if not draft.delivery_date_raw:
+        missing["delivery_date"] = "Укажите дату доставки"
+    if not draft.delivery_time_raw:
+        missing["delivery_time"] = "Укажите время доставки"
+    if missing:
+        raise OrderIntakeError(missing)
+
     if draft.delivery_time is None:
-        raise OrderIntakeError({"delivery_time": "Укажите время доставки"})
+        raise OrderIntakeError({"delivery_time": "Неверный формат времени, ожидается ЧЧ:ММ"})
 
-    delivery_date = draft.delivery_date
     delivery_time = draft.delivery_time
-
     if not (rules.delivery_from <= delivery_time <= rules.delivery_to):
         raise OrderIntakeError(
             {
@@ -112,7 +127,11 @@ def _delivery_moment(draft: OrderDraft, rules: PricingRules) -> tuple[date, time
             }
         )
 
-    if delivery_date < timezone.localdate():
+    if draft.delivery_date is None:
+        raise OrderIntakeError({"delivery_date": "Неверный формат даты, ожидается ГГГГ-ММ-ДД"})
+
+    delivery_date = draft.delivery_date
+    if delivery_date < timezone.localdate(now):
         raise OrderIntakeError({"delivery_date": "Дата доставки не может быть в прошлом"})
 
     moment = timezone.make_aware(datetime.combine(delivery_date, delivery_time))
@@ -130,8 +149,8 @@ def _resolve_promo(promo_code: str) -> PromoCode | None:
 
 
 def _price(draft: OrderDraft, rules: PricingRules, now: datetime) -> tuple[Quote, dict[str, Any]]:
-    items, spec = _selection(draft.selection, draft.spec_raw, rules.inscription_price)
-    delivery_date, delivery_time, moment = _delivery_moment(draft, rules)
+    delivery_date, delivery_time, moment = _delivery_moment(draft, rules, now)
+    items, spec = _selection(draft.selection, draft.spec_raw or {}, rules.inscription_price)
 
     subtotal = sum(item["price"] for item in items)
 
@@ -167,11 +186,12 @@ def place_order(
 ) -> PlacedOrder:
     """Считает заказ и сохраняет его вместе с покупателем и событием в одной транзакции."""
     now = context.now or timezone.now()
-    quote, spec = _price(draft, rules or parse_rules(), now)
 
     phone = normalize_phone(draft.phone) or normalize_phone(getattr(context.actor, "phone", "") or "")
     if not phone:
         raise OrderIntakeError({"phone": "Введите номер телефона"})
+
+    quote, spec = _price(draft, rules or parse_rules(), now)
 
     utm_source, utm_medium, utm_campaign = context.attribution
 
@@ -182,9 +202,9 @@ def place_order(
     with transaction.atomic():
         user, _ = User.objects.get_or_create(phone=phone)
         if draft.name:
-            user.name = draft.name.strip()
+            user.name = draft.name
         if draft.email:
-            user.email = draft.email.strip()
+            user.email = draft.email
         user.save()
 
         profile, _ = Profile.objects.get_or_create(user=user)

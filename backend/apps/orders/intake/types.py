@@ -1,9 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import date, datetime, time
 from typing import Any
 
 from apps.orders.models import Order
 from apps.promo.models import PromoCode
+from apps.users.models import User
 
 
 @dataclass(frozen=True)
@@ -32,7 +33,7 @@ class PricingRules:
 class RequestContext:
     ip: str = ""
     session_key: str = ""
-    actor: Any = None
+    actor: User | None = None
     attribution: tuple[str, str, str] = ("", "", "")
     pd_version: str = ""
     now: datetime | None = None
@@ -56,6 +57,8 @@ class OrderDraft:
     selection: OrderSelection
     delivery_date: date | None
     delivery_time: time | None
+    delivery_date_raw: str = ""
+    delivery_time_raw: str = ""
     promo_code: str = ""
     name: str = ""
     phone: str = ""
@@ -63,8 +66,7 @@ class OrderDraft:
     address: str = ""
     comment: str = ""
     courier_comment: str = ""
-    cake_id_raw: Any = None
-    spec_raw: dict[str, Any] = field(default_factory=dict)
+    spec_raw: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)

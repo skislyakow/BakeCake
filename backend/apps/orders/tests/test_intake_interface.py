@@ -1,11 +1,18 @@
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.utils import timezone
 
 from apps.catalog.models import Cake
-from apps.orders.intake import OrderIntakeError, parse_draft, place_order, price_order
-from apps.orders.intake.types import RequestContext
+from apps.orders.intake import (
+    OrderIntakeError,
+    RequestContext,
+    parse_draft,
+    parse_rules,
+    place_order,
+    price_order,
+)
 from apps.orders.models import Order, OrderEvent
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
@@ -104,13 +111,33 @@ def test_price_applies_promo_case_insensitively():
 
 
 @pytest.mark.django_db
-def test_price_requires_delivery_window():
-    payload, _ = _payload(delivery_date=None)
+def test_price_requires_delivery_slot():
+    payload, _ = _payload(delivery_date=None, delivery_time=None)
 
     with pytest.raises(OrderIntakeError) as exc:
         price_order(parse_draft(payload), now=timezone.now())
 
-    assert "delivery_date" in exc.value.errors
+    assert set(exc.value.errors) == {"delivery_date", "delivery_time"}
+
+
+@pytest.mark.django_db
+def test_price_prefers_delivery_errors_over_spec_errors():
+    payload, _ = _payload(spec={}, delivery_time="полдень")
+
+    with pytest.raises(OrderIntakeError) as exc:
+        price_order(parse_draft(payload), now=timezone.now())
+
+    assert exc.value.errors == {"delivery_time": "Неверный формат времени, ожидается ЧЧ:ММ"}
+
+
+def test_parse_rules_reads_settings():
+    rules = parse_rules()
+
+    assert rules.delivery_from.isoformat() == settings.DELIVERY_FROM + ":00"
+    assert rules.delivery_to.isoformat() == settings.DELIVERY_TO + ":00"
+    assert rules.lead_time_hours == settings.LEAD_TIME_HOURS
+    assert rules.rush_surcharge_percent == settings.RUSH_SURCHARGE_PERCENT
+    assert rules.inscription_price == settings.INSCRIPTION_PRICE
 
 
 @pytest.mark.django_db

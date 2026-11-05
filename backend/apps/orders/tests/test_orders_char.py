@@ -1,8 +1,7 @@
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from apps.catalog.models import Cake
@@ -10,8 +9,6 @@ from apps.orders.models import Order, OrderEvent
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
 from apps.users.models import Profile
-
-User = get_user_model()
 
 
 def _setup_base_groups():
@@ -24,6 +21,18 @@ def _setup_base_groups():
     return {"levels": levels, "form": form, "topping": topping, "o1": o1, "o2": o2, "o3": o3}
 
 
+def _spec(g):
+    return {"levels": g["o1"].pk, "form": g["o2"].pk, "topping": g["o3"].pk}
+
+
+@pytest.fixture
+def fixed_now(monkeypatch):
+    """Замораживает часы, чтобы срочность и даты в тестах были предсказуемы."""
+    moment = timezone.make_aware(datetime(2026, 5, 4, 9, 0))
+    monkeypatch.setattr(timezone, "now", lambda: moment)
+    return moment
+
+
 @pytest.mark.django_db
 def test_quote_custom_ok(client):
     g = _setup_base_groups()
@@ -31,7 +40,7 @@ def test_quote_custom_ok(client):
         "/api/quote/",
         data=json.dumps(
             {
-                "spec": {"levels": g["o1"].id, "form": g["o2"].id, "topping": g["o3"].id, "inscription": "Привет"},
+                "spec": {**_spec(g), "inscription": "Привет"},
                 "delivery_date": (timezone.localdate() + timedelta(days=1)).isoformat(),
                 "delivery_time": "12:00",
             }
@@ -44,16 +53,14 @@ def test_quote_custom_ok(client):
 
 
 @pytest.mark.django_db
-def test_quote_rush_surcharge(client):
+def test_quote_rush_surcharge(client, fixed_now):
     g = _setup_base_groups()
-    now = timezone.now()
-    soon = now + timedelta(minutes=30)
     resp = client.post(
         "/api/quote/",
         data=json.dumps(
             {
-                "spec": {"levels": g["o1"].id, "form": g["o2"].id, "topping": g["o3"].id},
-                "delivery_date": soon.date().isoformat(),
+                "spec": _spec(g),
+                "delivery_date": fixed_now.date().isoformat(),
                 "delivery_time": "12:00",
             }
         ),
@@ -61,6 +68,29 @@ def test_quote_rush_surcharge(client):
     )
     data = resp.json()
     assert data["ok"] is True
+    assert data["is_rush"] is True
+    assert data["rush_amount"] == 160
+    assert data["total"] == 800 + 160
+
+
+@pytest.mark.django_db
+def test_quote_far_date_is_not_rush(client, fixed_now):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/quote/",
+        data=json.dumps(
+            {
+                "spec": _spec(g),
+                "delivery_date": (fixed_now.date() + timedelta(days=3)).isoformat(),
+                "delivery_time": "12:00",
+            }
+        ),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["is_rush"] is False
+    assert data["rush_amount"] == 0
 
 
 @pytest.mark.django_db
@@ -71,7 +101,7 @@ def test_quote_promo(client):
         "/api/quote/",
         data=json.dumps(
             {
-                "spec": {"levels": g["o1"].id, "form": g["o2"].id, "topping": g["o3"].id},
+                "spec": _spec(g),
                 "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
                 "delivery_time": "14:00",
                 "promo_code": "save10",
@@ -100,6 +130,58 @@ def test_quote_missing_required(client):
 
 
 @pytest.mark.django_db
+def test_quote_reports_both_missing_slots(client):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/quote/",
+        data=json.dumps({"spec": _spec(g)}),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is False
+    assert set(data["errors"]) == {"delivery_date", "delivery_time"}
+
+
+@pytest.mark.django_db
+def test_quote_reports_invalid_formats(client):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/quote/",
+        data=json.dumps({"spec": _spec(g), "delivery_date": "04.05.2026", "delivery_time": "полдень"}),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is False
+    assert data["errors"] == {"delivery_time": "Неверный формат времени, ожидается ЧЧ:ММ"}
+
+
+@pytest.mark.django_db
+def test_quote_reports_invalid_date(client):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/quote/",
+        data=json.dumps({"spec": _spec(g), "delivery_date": "04.05.2026", "delivery_time": "12:00"}),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is False
+    assert data["errors"] == {"delivery_date": "Неверный формат даты, ожидается ГГГГ-ММ-ДД"}
+
+
+@pytest.mark.django_db
+def test_quote_checks_delivery_before_spec(client):
+    resp = client.post(
+        "/api/quote/",
+        data=json.dumps({"spec": {}}),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is False
+    assert "delivery_date" in data["errors"]
+    assert "spec" not in data["errors"]
+
+
+@pytest.mark.django_db
 def test_create_order_creates_user_profile_order_event_pd_utm(client):
     g = _setup_base_groups()
     resp = client.post(
@@ -112,7 +194,7 @@ def test_create_order_creates_user_profile_order_event_pd_utm(client):
                 "address": "ул. Тестовая, 1",
                 "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
                 "delivery_time": "15:00",
-                "spec": {"levels": g["o1"].id, "form": g["o2"].id, "topping": g["o3"].id},
+                "spec": _spec(g),
                 "comment": "тест",
             }
         ),
@@ -132,6 +214,26 @@ def test_create_order_creates_user_profile_order_event_pd_utm(client):
 
 
 @pytest.mark.django_db
+def test_create_order_accepts_numeric_phone(client):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/orders/",
+        data=json.dumps(
+            {
+                "phone": 89001234567,
+                "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
+                "delivery_time": "16:00",
+                "spec": _spec(g),
+            }
+        ),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is True
+    assert Order.objects.get(number=data["number"]).user.phone in ("89001234567", "+79001234567")
+
+
+@pytest.mark.django_db
 def test_create_order_with_cake_id_invalid_falls_back_to_spec(client):
     Cake.objects.create(name="Тестовый торт", slug="test-cake", price=1000, occasion="день рождения", is_active=True)
     g = _setup_base_groups()
@@ -143,7 +245,7 @@ def test_create_order_with_cake_id_invalid_falls_back_to_spec(client):
                 "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
                 "delivery_time": "16:00",
                 "cake_id": 9999,
-                "spec": {"levels": g["o1"].id, "form": g["o2"].id, "topping": g["o3"].id},
+                "spec": _spec(g),
             }
         ),
         content_type="application/json",
@@ -151,4 +253,4 @@ def test_create_order_with_cake_id_invalid_falls_back_to_spec(client):
     data = resp.json()
     assert data["ok"] is True
     order = Order.objects.get(number=data["number"])
-    assert order.spec.get("levels") == g["o1"].id
+    assert order.spec.get("levels") == g["o1"].pk

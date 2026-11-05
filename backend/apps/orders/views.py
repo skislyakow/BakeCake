@@ -5,10 +5,9 @@ from rest_framework.decorators import api_view
 
 from config.responses import fail, ok
 from apps.analytics.views import _read_first_touch
-from apps.orders.models import Issue, Order
-from apps.users.utils import normalize_phone
 from apps.orders import intake
 from apps.orders.intake import OrderIntakeError
+from apps.orders.models import Issue, Order
 
 
 @api_view(["POST"])
@@ -55,9 +54,6 @@ def _serialize(order, full=False):
     return data
 
 
-
-
-
 def _user_order_or_fail(request, number):
     if not request.user.is_authenticated:
         return fail({"auth": "Не авторизован"}), None
@@ -84,9 +80,6 @@ def orders(request):
         return ok(items=items)
 
     body = request.data
-    phone = normalize_phone(body.get("phone"))
-    if not phone:
-        return fail({"phone": "Введите номер телефона"})
 
     try:
         draft = intake.parse_draft(body)
@@ -103,14 +96,12 @@ def orders(request):
             now=now,
         )
         placed = intake.place_order(draft, ctx)
-        user = placed.order.user
     except OrderIntakeError as exc:
         return fail(exc.errors)
 
-    if not request.user.is_authenticated or request.user.id != user.id:
-        auth_login(request, user)
-
     order = placed.order
+    if not request.user.is_authenticated or request.user.pk != order.user.pk:
+        auth_login(request, order.user)
 
     return ok(
         number=order.number,

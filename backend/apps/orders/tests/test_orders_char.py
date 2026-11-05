@@ -169,6 +169,44 @@ def test_quote_reports_invalid_date(client):
 
 
 @pytest.mark.django_db
+def test_quote_rejects_past_date(client, fixed_now):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/quote/",
+        data=json.dumps(
+            {
+                "spec": _spec(g),
+                "delivery_date": (fixed_now.date() - timedelta(days=1)).isoformat(),
+                "delivery_time": "12:00",
+            }
+        ),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is False
+    assert data["errors"] == {"delivery_date": "Дата доставки не может быть в прошлом"}
+
+
+@pytest.mark.django_db
+def test_quote_rejects_time_outside_window(client):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/quote/",
+        data=json.dumps(
+            {
+                "spec": _spec(g),
+                "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
+                "delivery_time": "03:00",
+            }
+        ),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is False
+    assert data["errors"] == {"delivery_time": "Доставка работает с 10:00 до 23:00"}
+
+
+@pytest.mark.django_db
 def test_quote_checks_delivery_before_spec(client):
     resp = client.post(
         "/api/quote/",

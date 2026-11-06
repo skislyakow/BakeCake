@@ -4,7 +4,7 @@ from django.contrib.auth import (
     logout as auth_logout,
 )
 from config.responses import fail, ok
-from .models import Profile, User
+from .customer import customer_profile, edit_customer, identify_customer
 from .utils import normalize_phone
 
 
@@ -13,12 +13,11 @@ def login(request):
     phone = normalize_phone(request.data.get("phone"))
     if not phone:
         return fail({"phone": "Введите номер телефона"})
-    user, _ = User.objects.get_or_create(phone=phone)
-    Profile.objects.get_or_create(user=user)
+    user = identify_customer(phone)
     auth_login(request, user)
     return ok(
         user={
-            "id": user.id,
+            "id": user.pk,
             "phone": user.phone,
             "name": user.name,
             "email": user.email,
@@ -39,22 +38,10 @@ def me(request):
     if not request.user.is_authenticated:
         return fail({"auth": "Не авторизован"})
 
-    profile, _ = Profile.objects.get_or_create(user=request.user)
-
     if request.method == "PATCH":
-        name = request.data.get("name")
-        email = request.data.get("email")
-        default_address = request.data.get("default_address")
-
-        if name is not None:
-            request.user.name = name
-        if email is not None:
-            request.user.email = email
-        request.user.save()
-
-        if default_address is not None:
-            profile.default_address = default_address
-            profile.save()
+        profile = edit_customer(request.user, request.data)
+    else:
+        profile = customer_profile(request.user)
 
     return ok(
         phone=request.user.phone,

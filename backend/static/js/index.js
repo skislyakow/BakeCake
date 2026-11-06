@@ -40,39 +40,9 @@ Vue.createApp({
                     }
                     return ' телефон';
                 },
-                name_format: (value) => {
-                    const regex = /^[a-zA-Zа-яА-Я]+$/
-                    if (!value) {
-                        return true;
-                    }
-                    if ( !regex.test(value)) {
-
-                        return '⚠ Формат имени нарушен';
-                    }
-                    return true;
-                },
-                email_format: (value) => {
-                    const regex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i
-                    if (!value) {
-                        return true;
-                    }
-                    if ( !regex.test(value)) {
-
-                        return '⚠ Формат почты нарушен';
-                    }
-                    return true;
-                },
-                phone_format:(value) => {
-                    const regex = /^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/
-                    if (!value) {
-                        return true;
-                    }
-                    if ( !regex.test(value)) {
-
-                        return '⚠ Формат телефона нарушен';
-                    }
-                    return true;
-                },
+                name_format: BC.rules.name('⚠ Формат имени нарушен'),
+                email_format: BC.rules.email('⚠ Формат почты нарушен'),
+                phone_format: BC.rules.phone('⚠ Формат телефона нарушен'),
                 email: (value) => {
                     if (value) {
                         return true;

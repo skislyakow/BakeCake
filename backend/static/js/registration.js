@@ -7,34 +7,9 @@ Vue.createApp({
     data() {
         return {
             RegSchema: {
-                reg: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return 'Поле не заполнено';
-                },
-                phone_format: (value) => {
-                    const regex = /^((8|\+7)[\- ]?)?(\(?\d{3}\)?[\- ]?)?[\d\- ]{7,10}$/
-                    if (!value) {
-                        return true;
-                    }
-                    if ( !regex.test(value)) {
-
-                        return '⚠ Формат телефона нарушен';
-                    }
-                    return true;
-                },
-                code_format: (value) => {
-                    const regex = /^[a-zA-Z0-9]+$/
-                    if (!value) {
-                        return true;
-                    }
-                    if ( !regex.test(value)) {
-
-                        return '⚠ Формат кода нарушен';
-                    }
-                    return true;
-                }
+                reg: BC.rules.required('Поле не заполнено'),
+                phone_format: BC.rules.phone('⚠ Формат телефона нарушен'),
+                code_format: BC.rules.code('⚠ Формат кода нарушен')
             },
             Step: 'Number',
             RegInput: '',

@@ -3,6 +3,7 @@ import logging
 
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status as http_status
 from rest_framework.decorators import api_view
 from yookassa import Configuration, Payment as YooPayment
 
@@ -26,17 +27,17 @@ def _configure_yookassa():
 def create_payment(request, order_id):
     """Создать платёж ЮKassa и вернуть ссылку на оплату (или повторный pending-платёж)."""
     if not request.user.is_authenticated:
-        return fail({"auth": "Не авторизован"})
+        return fail({"auth": "Не авторизован"}, status=http_status.HTTP_401_UNAUTHORIZED)
 
     order = request.user.orders.filter(pk=order_id).first()
     if order is None:
-        return fail({"order": "Заказ не найден"})
+        return fail({"order": "Заказ не найден"}, status=http_status.HTTP_404_NOT_FOUND)
 
     if order.status != Order.Status.NEW:
-        return fail({"order": "Заказ уже оплачен или закрыт"})
+        return fail({"order": "Заказ уже оплачен или закрыт"}, status=http_status.HTTP_409_CONFLICT)
 
     if not _configure_yookassa():
-        return fail({"pay": "Оплата временно недоступна, попробуйте позже"})
+        return fail({"pay": "Оплата временно недоступна, попробуйте позже"}, status=http_status.HTTP_503_SERVICE_UNAVAILABLE)
 
     payment = order.payments.filter(status=Payment.Status.PENDING).order_by("-created").first()
     if payment is None:
@@ -60,11 +61,11 @@ def create_payment(request, order_id):
         )
     except Exception:
         logger.exception("Ошибка создания платежа ЮKassa для заказа %s", order.pk)
-        return fail({"pay": "Не удалось создать платёж, попробуйте позже"})
+        return fail({"pay": "Не удалось создать платёж, попробуйте позже"}, status=http_status.HTTP_502_BAD_GATEWAY)
 
     confirmation = yoo_payment.confirmation
     if confirmation is None or not confirmation.confirmation_url:
-        return fail({"pay": "Не удалось создать платёж, попробуйте позже"})
+        return fail({"pay": "Не удалось создать платёж, попробуйте позже"}, status=http_status.HTTP_502_BAD_GATEWAY)
 
     payment.provider_id = yoo_payment.id
     payment.confirmation_url = confirmation.confirmation_url

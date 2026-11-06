@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.contrib.auth import login as auth_login
 from django.utils import timezone
+from rest_framework import status as http_status
 from rest_framework.decorators import api_view
 
 from config.responses import fail, ok
@@ -56,10 +57,10 @@ def _serialize(order, full=False):
 
 def _user_order_or_fail(request, number):
     if not request.user.is_authenticated:
-        return fail({"auth": "Не авторизован"}), None
+        return fail({"auth": "Не авторизован"}, status=http_status.HTTP_401_UNAUTHORIZED), None
     order = request.user.orders.filter(number=str(number)).first()
     if order is None:
-        return fail({"number": "Заказ не найден"}), None
+        return fail({"number": "Заказ не найден"}, status=http_status.HTTP_404_NOT_FOUND), None
     return None, order
 
 

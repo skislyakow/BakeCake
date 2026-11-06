@@ -1,9 +1,12 @@
-from rest_framework.decorators import api_view
 from django.contrib.auth import (
     login as auth_login,
     logout as auth_logout,
 )
+from rest_framework import status as http_status
+from rest_framework.decorators import api_view
+
 from config.responses import fail, ok
+
 from .models import Profile, User
 from .utils import normalize_phone
 
@@ -18,7 +21,7 @@ def login(request):
     auth_login(request, user)
     return ok(
         user={
-            "id": user.id,
+            "id": user.pk,
             "phone": user.phone,
             "name": user.name,
             "email": user.email,
@@ -29,7 +32,7 @@ def login(request):
 @api_view(["POST"])
 def logout(request):
     if not request.user.is_authenticated:
-        return fail({"auth": "Не авторизован"})
+        return fail({"auth": "Не авторизован"}, status=http_status.HTTP_401_UNAUTHORIZED)
     auth_logout(request)
     return ok()
 
@@ -37,7 +40,7 @@ def logout(request):
 @api_view(["GET", "PATCH"])
 def me(request):
     if not request.user.is_authenticated:
-        return fail({"auth": "Не авторизован"})
+        return fail({"auth": "Не авторизован"}, status=http_status.HTTP_401_UNAUTHORIZED)
 
     profile, _ = Profile.objects.get_or_create(user=request.user)
 

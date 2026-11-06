@@ -74,10 +74,10 @@ check("quote по готовому торту", status == 200 and quote_cake.get
 check("цена торта совпадает с каталогом", quote_cake.get("subtotal") == cakes[0]["price"], (quote_cake, cakes[0]))
 
 status, bad = api("POST", "/api/quote/", {"spec": spec})
-check("пустой слот -> обе ошибки", status == 200 and bad.get("ok") is False and set(bad.get("errors", {})) == {"delivery_date", "delivery_time"}, bad)
+check("пустой слот -> обе ошибки", status == 400 and bad.get("ok") is False and set(bad.get("errors", {})) == {"delivery_date", "delivery_time"}, (status, bad))
 
 status, bad_format = api("POST", "/api/quote/", {"spec": spec, "delivery_date": "03.11.2026", "delivery_time": "12:00"})
-check("кривая дата -> текст про формат", bad_format.get("errors", {}).get("delivery_date") == "Неверный формат даты, ожидается ГГГГ-ММ-ДД", bad_format)
+check("кривая дата -> текст про формат", status == 400 and bad_format.get("errors", {}).get("delivery_date") == "Неверный формат даты, ожидается ГГГГ-ММ-ДД", (status, bad_format))
 
 order_body = {
     "name": "Смоук Тест",

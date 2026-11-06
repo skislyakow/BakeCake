@@ -4,12 +4,12 @@ from django import template
 from django.db.models import Q, Sum
 from django.utils import timezone
 
-from apps.analytics.stats import build_stats
+from apps.analytics.reporting import REVENUE_STATUSES, build_stats
 from apps.orders.models import Issue, Order
 
 register = template.Library()
 
-PAID_STATUSES = [Order.Status.PAID, Order.Status.DELIVERED]
+PAID_STATUSES = REVENUE_STATUSES
 
 
 @register.simple_tag

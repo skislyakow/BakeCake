@@ -1,6 +1,27 @@
+import re
+
 from django.db import migrations
 
-from apps.users.utils import normalize_phone
+_DIGITS_RE = re.compile(r"\D")
+
+
+def normalize_phone(value):
+    """Копия `apps.users.utils.normalize_phone` внутри миграции.
+
+    Миграция должна оставаться самодостаточной: правки живой утилиты не должны
+    менять то, что она сделает на старой базе.
+    """
+    if not value:
+        return ""
+    raw = str(value).strip()
+    digits = _DIGITS_RE.sub("", raw)
+    if len(digits) == 10 and digits[:1] == "9":
+        digits = "7" + digits
+    if len(digits) == 11 and digits[:1] == "8":
+        digits = "7" + digits[1:]
+    if len(digits) == 11 and digits[:1] == "7":
+        return "+" + digits
+    return raw
 
 
 def merge_duplicate_phones(apps, schema_editor):

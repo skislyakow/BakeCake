@@ -51,6 +51,12 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = "пользователи"
         ordering = ["-date_joined"]
 
+    def save(self, *args, **kwargs):
+        # Последний рубеж: даже `User.objects.create()` и правка в админке не
+        # должны класть в базу номер в чужом формате.
+        self.phone = normalize_phone(self.phone)
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.name or 'Без имени'} ({self.phone})"
 

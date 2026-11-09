@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view
 from config.responses import fail, ok
 from apps.analytics.views import _read_first_touch
 from apps.orders import intake
+from apps.orders.composition import describe
 from apps.orders.intake import OrderIntakeError
 from apps.orders.models import Issue, Order
 
@@ -27,16 +28,13 @@ def quote(request):
         return fail(exc.errors)
 
 
-def _spec_labels(order):
-    return [item["title"] for item in order.price_items if isinstance(item, dict) and item.get("title")]
-
-
 def _serialize(order, full=False):
+    composition = describe(order)
     data = {
         "number": order.number,
         "status": order.status,
         "status_label": order.get_status_display(),  # pyright: ignore[reportAttributeAccessIssue]
-        "spec_labels": _spec_labels(order),
+        "spec_labels": composition.labels,
         "total": order.total,
         "delivery_date": order.delivery_date.isoformat(),
         "delivery_time": order.delivery_time.strftime("%H:%M"),
@@ -47,7 +45,7 @@ def _serialize(order, full=False):
     }
     if full:
         data.update(
-            spec=order.spec,
+            spec=composition.spec,
             comment=order.comment,
             courier_comment=order.courier_comment,
         )

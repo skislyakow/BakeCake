@@ -1,10 +1,32 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
+
 from .models import Profile, User
+from .utils import normalize_phone
+
+
+class _NormalizePhoneFormMixin:
+    """Админка проверяет уникальность до `save()`, поэтому номер приводим здесь:
+    иначе дубль в другом формате пройдёт валидацию и упадёт на unique-индексе.
+    """
+
+    def clean_phone(self):
+        return normalize_phone(self.cleaned_data.get("phone"))
+
+
+class PhoneNormalizedUserChangeForm(_NormalizePhoneFormMixin, UserChangeForm):
+    pass
+
+
+class PhoneNormalizedUserCreationForm(_NormalizePhoneFormMixin, UserCreationForm):
+    pass
 
 
 @admin.register(User)
 class BakeCakeUserAdmin(UserAdmin):
+    form = PhoneNormalizedUserChangeForm
+    add_form = PhoneNormalizedUserCreationForm
     list_display = ("phone", "name", "is_staff", "date_joined")
     list_filter = ("is_staff", "is_active", "date_joined")
     search_fields = ("phone", "name", "email")

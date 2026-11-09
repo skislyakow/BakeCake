@@ -6,366 +6,200 @@ Vue.createApp({
         ErrorMessage: VeeValidate.ErrorMessage,
     },
     data() {
-        return {
-            schema1: {
-                lvls: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' количество уровней';
-                },
-                form: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' форму торта';
-                },
-                topping: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' топпинг';
-                }
-            },
-            schema2: {
-                name: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' имя';
-                },
-                phone: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' телефон';
-                },
-                name_format: BC.rules.name('⚠ Формат имени нарушен'),
-                email_format: BC.rules.email('⚠ Формат почты нарушен'),
-                phone_format: BC.rules.phone('⚠ Формат телефона нарушен'),
-                email: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' почту';
-                },
-                address: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' адрес';
-                },
-                date: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' дату доставки';
-                },
-                time: (value) => {
-                    if (value) {
-                        return true;
-                    }
-                    return ' время доставки';
-                }
-            },
-            Config: null,
-            ConfigError: '',
-            Catalog: [],
-            CatalogError: '',
-            CatalogOpen: false,
-            SelectedCake: null,
-            Authed: false,
-            Hydrated: false,
-            SaveTimer: null,
-            Sel: {levels: 0, form: 0, topping: 0, berries: 0, decor: 0},
-            Words: '',
-            Comments: '',
-            Designed: false,
-            Quote: null,
-            QuoteError: '',
-            QuoteTimer: null,
-            QuoteTicket: 0,
-            Promo: '',
-            OrderError: '',
-            OrderPlaced: '',
-            Submitting: false,
+        var draft = (typeof BC !== 'undefined' && BC.draft) ? BC.draft : null;
+        var rules = (typeof BC !== 'undefined' && BC.rules) ? BC.rules : null;
 
-            Name: '',
-            Phone: null,
-            Email: null,
-            Address: null,
-            Dates: null,
-            Time: null,
-            DelivComments: ''
+        function asValidator(ruleOrFactory, message, fallback) {
+            if (!ruleOrFactory) return fallback;
+            try {
+                var maybe = ruleOrFactory(message);
+                return typeof maybe === 'function' ? maybe : ruleOrFactory;
+            } catch (e) {
+                return typeof ruleOrFactory === 'function' ? ruleOrFactory : fallback;
+            }
         }
+
+        var schema1 = draft ? draft.schema1() : {
+            lvls: function (value) { return value ? true : ' количество уровней'; },
+            form: function (value) { return value ? true : ' форму торта'; },
+            topping: function (value) { return value ? true : ' топпинг'; },
+        };
+
+        var schema2 = draft ? draft.schema2() : {
+            name: function (value) { return value ? true : ' имя'; },
+            phone: function (value) { return value ? true : ' телефон'; },
+            email: function (value) { return value ? true : ' почту'; },
+            address: function (value) { return value ? true : ' адрес'; },
+            date: function (value) { return value ? true : ' дату доставки'; },
+            time: function (value) { return value ? true : ' время доставки'; },
+            name_format: function (value) {
+                if (!value) return '⚠ Укажите имя';
+                if (!/^[a-zA-Zа-яА-ЯёЁ\s-]+$/.test(value)) return '⚠ Недопустимые символы в имени';
+                return true;
+            },
+            phone_format: function (value) {
+                if (!value) return true;
+                if (!/^\+?\d[\d\s\-()]{6,}$/.test(value)) return '⚠ Формат телефона нарушен';
+                return true;
+            },
+            email_format: function (value) {
+                if (!value) return true;
+                if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(value)) return '⚠ Формат почты нарушен';
+                return true;
+            },
+        };
+
+        if (rules) {
+            schema2.name_format = asValidator(rules.name, '⚠ Формат имени нарушен', schema2.name_format);
+            schema2.phone_format = asValidator(rules.phone, '⚠ Формат телефона нарушен', schema2.phone_format);
+            schema2.email_format = asValidator(rules.email, '⚠ Формат почты нарушен', schema2.email_format);
+        }
+
+        return Object.assign(draft ? draft.createState([]) : {
+            Designed: false,
+            Catalog: [], CatalogError: '', CatalogOpen: false,
+            SelectedCake: null, Levels: null, Form: null, Topping: null,
+            Berries: null, Decor: null, Words: '', Comments: '', Promo: '',
+            Name: '', Phone: '', Email: '', Address: '', Dates: '', Time: '', DelivComments: '',
+            Cost: 0, Quote: null, QuoteError: '', OrderError: '', OrderPlaced: null,
+            Submitting: false, RushPercent: 20, ShowPayment: false,
+            Groups: [], Sel: {},
+        }, {
+            schema1: schema1,
+            schema2: schema2,
+            quoteTimer: null,
+        });
+    },
+    computed: {
+        Required() {
+            return this.Groups.filter(function (g) { return g.required; });
+        },
+        Extra() {
+            return this.Groups.filter(function (g) { return !g.required; });
+        },
+        Configured() {
+            return BC.draft.isConfigured(this);
+        },
+        IsRush() {
+            return this.Quote && this.Quote.is_rush;
+        },
+    },
+    mounted() {
+        this.LoadCatalog();
+        this.LoadConfig();
+    },
+    watch: {
+        SelectedCake: 'UpdateQuote',
+        Levels: 'UpdateQuote', Topping: 'UpdateQuote', Berries: 'UpdateQuote', Decor: 'UpdateQuote',
+        Words: 'UpdateQuote', Promo: 'UpdateQuote', Dates: 'UpdateQuote', Time: 'UpdateQuote',
     },
     methods: {
         Label(code) {
-            const group = this.Groups.find(g => g.code === code)
-            const option = group && group.options.find(o => o.id === this.Sel[code])
-            return option ? option.title : 'не выбрано'
-        },
-        ApplyRepeat() {
-            // «Повторить заказ» из «Мои заказы» кладёт spec прошлого заказа в sessionStorage (orders.js)
-            let spec = null
-            try {
-                const raw = sessionStorage.getItem('bc_repeat')
-                sessionStorage.removeItem('bc_repeat')
-                spec = raw ? JSON.parse(raw) : null
-            } catch (e) {
-                return
-            }
-            if (!spec || typeof spec !== 'object') return
-            if (typeof spec.cake === 'number') {
-                const cake = this.Catalog.find(c => c.id === spec.cake)
-                if (cake) {
-                    this.SelectCake(cake, false)
-                    this.$nextTick(() => {
-                        const section = document.getElementById('step4')
-                        if (section) section.scrollIntoView()
-                    })
-                }
-                return
-            }
-            for (const g of this.Config.groups) {
-                // опция могла исчезнуть из каталога с тех пор — тогда группу не трогаем
-                if (g.options.some(o => o.id === spec[g.code])) this.Sel[g.code] = spec[g.code]
-            }
-            if (typeof spec.inscription === 'string') this.Words = spec.inscription
-            this.$nextTick(() => {
-                const section = document.getElementById('step3')
-                if (section) section.scrollIntoView()
-            })
+            return BC.draft.labelFor(this, code);
         },
         async LoadCatalog() {
-            const data = await api('/api/catalog/')
-            if (!data.ok) {
-                this.CatalogError = firstError(data)
-                return
+            const data = await api('/api/catalog/');
+            if (data.ok) {
+                this.Catalog = data.items;
+            } else {
+                this.CatalogError = firstError(data);
             }
-            this.Catalog = data.items || []
         },
-        async LoadConfigurator() {
-            const data = await api('/api/configurator/')
-            if (!data.ok) {
-                this.ConfigError = firstError(data)
-                return
-            }
-            this.Config = data
-        },
-        SelectCake(cake, scroll = true) {
-            this.SelectedCake = cake
-            this.Designed = true
-            this.Quote = null
-            this.QuoteError = ''
-            if (scroll) {
-                this.$nextTick(() => {
-                    const section = document.getElementById('step4')
-                    if (section) section.scrollIntoView()
-                })
-            }
+        SelectCake(cake) {
+            this.SelectedCake = cake;
+            document.getElementById('ToStep3').click();
         },
         ClearCake() {
-            this.SelectedCake = null
-            this.Quote = null
-            this.QuoteError = ''
-            this.$nextTick(() => {
-                const section = document.getElementById('step3')
-                if (section) section.scrollIntoView()
-            })
+            this.SelectedCake = null;
+            this.UpdateQuote();
         },
-        async RequestQuote(body) {
-            const ticket = (this.QuoteTicket = (this.QuoteTicket || 0) + 1)
-            const data = await api('/api/quote/', 'POST', body)
-            if (ticket !== this.QuoteTicket) return // пока шёл запрос, выбор уже поменялся
-            if (data.ok) {
-                this.Quote = data
-            } else {
-                this.Quote = null
-                this.QuoteError = firstError(data)
+        async LoadConfig() {
+            const data = await api('/api/cake-config/');
+            if (!data.ok) {
+                this.ConfigError = firstError(data);
+                return;
             }
-        },
-async FillProfile() {
-            const me = await api('/api/me/')
-            if (!me.ok) return
-            this.Authed = true
-            this.Name = me.name || ''
-            this.Phone = me.phone || null
-            this.Email = me.email || null
-            let address = me.default_address || ''
-            if (!address) {
-                const orders = await api('/api/orders/')
-                if (orders.ok && orders.items && orders.items.length) {
-                    address = orders.items[0].address || ''
-                }
-            }
-            this.Address = address || null
-        },
-        SaveProfile() {
-            if (!this.Authed || !this.Hydrated) return
-            clearTimeout(this.SaveTimer)
-            this.SaveTimer = setTimeout(() => {
-                api('/api/me/', 'PATCH', {
-                    name: this.Name,
-                    email: this.Email,
-                    default_address: this.Address
-                })
-            }, 600)
-        },
-        async SubmitOrder() {
-            if (this.Submitting) return
-            this.Submitting = true
-            this.OrderError = ''
-            this.OrderPlaced = ''
+            this.Groups = data.groups;
+            this.Sel = {};
+            var self = this;
+            this.Groups.forEach(function (g) { self.Sel[g.code] = null; });
+            BC.draft.applyConfigDefaults(this, data);
+
             try {
-                const payload = {
-                    name: this.Name,
-                    phone: this.Phone,
-                    email: this.Email,
-                    address: this.Address,
-                    delivery_date: this.Dates,
-                    delivery_time: this.Time,
-                    comment: this.Comments,
-                    courier_comment: this.DelivComments,
-                    promo_code: this.Promo
+                var saved = BC.draft.readProfile(localStorage);
+                if (saved) {
+                    this.Name = saved.name || '';
+                    this.Phone = saved.phone || '';
+                    this.Email = saved.email || '';
                 }
-                if (this.SelectedCake) {
-                    payload.cake_id = this.SelectedCake.id
-                } else {
-                    payload.spec = {...this.Sel, inscription: this.Words.trim()}
-                }
-                const data = await api('/api/orders/', 'POST', payload)
-                if (data.ok) {
-                    this.OrderPlaced = data.number
-                    this.ResetForms()
-                    try {
-                        const pay = await api(`/api/payments/${data.order_id}/`, 'POST')
-                        if (pay.ok && pay.confirmation_url) {
-                            window.location.href = pay.confirmation_url
-                        }
-                    } catch (e) {
-                        // платёж не удалось создать — заказ принят, оплатить можно позже в ЛК
-                    }
-                } else {
-                    this.OrderError = firstError(data)
-                }
-            } finally {
-                this.Submitting = false
-            }
+            } catch (e) {}
+
+            this.ApplyRepeat();
+
+            const cakeId = parseInt(new URLSearchParams(location.search).get('cake'), 10);
+            if (cakeId && this.Catalog.length === 0) await this.LoadCatalog();
+            const fromLink = this.Catalog.find(function (c) { return c.id === cakeId; });
+            if (fromLink) this.SelectedCake = fromLink;
         },
-        ResetForms() {
-            clearTimeout(this.SaveTimer)
-            this.Hydrated = false
-            this.Sel = {levels: 0, form: 0, topping: 0, berries: 0, decor: 0}
-            this.Words = ''
-            this.Comments = ''
-            this.DelivComments = ''
-            this.Promo = ''
-            this.Quote = null
-            this.QuoteError = ''
-            this.SelectedCake = null
-            this.CatalogOpen = false
-            this.Dates = null
-            this.Time = null
-            this.Name = ''
-            this.Phone = null
-            this.Email = null
-            this.Address = null
-            if (this.Authed) {
-                this.FillProfile().finally(() => {
-                    this.Hydrated = true
-                })
-            } else {
-                this.Hydrated = true
-            }
+        ApplyRepeat() {
+            var item = BC.draft.readRepeat(sessionStorage);
+            if (!item) return;
+            BC.draft.clearRepeat(sessionStorage);
+            BC.draft.applyRepeat(this, item);
         },
         ToStep4() {
-            this.SelectedCake = null
-            this.Quote = null
-            this.QuoteError = ''
-            this.Designed = true
-            setTimeout(() => this.$refs.ToStep4.click(), 0)
-        }
-    },
-    async mounted() {
-        await Promise.all([this.LoadCatalog(), this.LoadConfigurator()])
-        this.ApplyRepeat()
-        await this.FillProfile()
-        this.Hydrated = true
-    },
-    computed: {
-        Groups() {
-            // имя поля и префикс id берутся из вёрстки макета: levels → lvls / num1, остальные = code
-            return this.Config ? this.Config.groups.map(g => ({
-                ...g,
-                field: g.code === 'levels' ? 'lvls' : g.code,
-                prefix: g.code === 'levels' ? 'num' : g.code
-            })) : []
+            this.Designed = true;
+            setTimeout(() => this.$refs.ToStep4.click(), 100);
         },
-        Required() { return this.Groups.filter(g => g.is_required) },
-        Extra() { return this.Groups.filter(g => !g.is_required) },
-        Preview() {
-            // предварительная сумма, пока сервер не может посчитать (нет даты/времени или не всё выбрано)
-            if (!this.Config) return 0
-            let sum = 0
-            for (const g of this.Config.groups) {
-                const option = g.options.find(o => o.id === this.Sel[g.code])
-                if (option) sum += option.price_delta
-            }
-            if (this.Words.trim()) sum += this.Config.inscription_price
-            return sum
-        },
-        Cost() {
-            if (this.Quote) return this.Quote.total
-            if (this.SelectedCake) return this.SelectedCake.price
-            return this.Preview
-        },
-        IsRush() {
-            return Boolean(this.Quote && this.Quote.is_rush)
-        },
-        RushPercent() {
-            return this.Config ? this.Config.delivery.rush_surcharge_percent : 0
+        UpdateQuote() {
+            clearTimeout(this.quoteTimer);
+            if (!this.Configured || !this.Dates || !this.Time) return;
+            this.quoteTimer = setTimeout(() => this.FetchQuote(), 350);
         },
         QuoteBody() {
-            // null, пока серверу нечего считать: для готового торта нужны дата и время,
-            // для своего — ещё и все обязательные группы
-            if (!this.Dates || !this.Time) return null
-            if (this.SelectedCake) {
-                return {
-                    cake_id: this.SelectedCake.id,
-                    delivery_date: this.Dates,
-                    delivery_time: this.Time,
-                    promo_code: this.Promo
-                }
+            return BC.draft.quoteBody(this);
+        },
+        async FetchQuote() {
+            if (!this.Configured) return;
+            this.QuoteError = '';
+            const data = await api('/api/quote/', 'POST', this.QuoteBody());
+            if (data.ok) {
+                this.Quote = data;
+                this.Cost = data.total;
+            } else {
+                this.QuoteError = firstError(data);
             }
-            if (!this.Config || this.Config.groups.some(g => g.is_required && !this.Sel[g.code])) return null
-            return {
-                spec: {...this.Sel, inscription: this.Words.trim()},
-                delivery_date: this.Dates,
-                delivery_time: this.Time,
-                promo_code: this.Promo
+        },
+        async SubmitOrder() {
+            this.OrderError = '';
+            this.OrderPlaced = null;
+            if (!this.Quote) await this.FetchQuote();
+            if (!this.Quote) return;
+
+            this.Submitting = true;
+            const data = await api('/api/orders/', 'POST', BC.draft.orderBody(this));
+            this.Submitting = false;
+
+            if (!data.ok) {
+                this.OrderError = firstError(data);
+                return;
             }
-        }
+
+            try {
+                BC.draft.writeProfile(localStorage, {name: this.Name, phone: this.Phone, email: this.Email});
+            } catch (e) {}
+            this.OrderPlaced = data.number;
+            if (data.payment_url) {
+                try { localStorage.setItem('bc_paid', JSON.stringify({number: data.number, ts: Date.now()})); } catch (e) {}
+                window.location.href = data.payment_url;
+            } else {
+                window.location.href = '/orders/?order=' + encodeURIComponent(data.number);
+            }
+            this.ResetForms();
+        },
+        ResetForms() {
+            BC.draft.resetState(this);
+            if (this.$refs.PayModal) bootstrap.Modal.getInstance(this.$refs.PayModal).hide();
+        },
     },
-    watch: {
-        Name() {
-            this.SaveProfile()
-        },
-        Email() {
-            this.SaveProfile()
-        },
-        Address() {
-            this.SaveProfile()
-        },
-        QuoteBody: {
-            handler(body) {
-                clearTimeout(this.QuoteTimer)
-                this.Quote = null
-                this.QuoteError = ''
-                if (!body) return
-                this.QuoteTimer = setTimeout(() => this.RequestQuote(body), 250)
-            },
-            deep: true
-        }
-    }
-}).mount('#VueApp')
+}).mount('#VueApp');

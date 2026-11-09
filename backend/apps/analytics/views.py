@@ -88,16 +88,6 @@ def track_visit(request):
     return _first_touch(request, response, utm_source, utm_medium, utm_campaign)
 
 
-@api_view(["GET"])
-def admin_orders(request):
-    return ok(items=[], total=0)
-
-
-@api_view(["PATCH"])
-def admin_order_patch(request, order_id):
-    return ok()
-
-
 def _date_params(request):
     return (
         stats_helpers.parse_date(request.GET.get("from")),

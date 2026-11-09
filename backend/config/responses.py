@@ -8,5 +8,5 @@ def ok(**payload):
     return Response({"ok": OK, **payload}, status=200)
 
 
-def fail(errors):
-    return Response({"ok": FAIL, "errors": errors}, status=200)
+def fail(errors, status=400):
+    return Response({"ok": FAIL, "errors": errors}, status=status)

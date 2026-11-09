@@ -9,7 +9,7 @@ from apps.catalog.models import Cake
 from apps.orders.models import Order, OrderEvent
 from apps.pricing.models import Option, OptionGroup
 from apps.promo.models import PromoCode
-from apps.users.models import Profile, User
+from apps.users.customer import CustomerData, identify_customer
 from apps.users.utils import normalize_phone
 
 from .errors import OrderIntakeError
@@ -200,20 +200,13 @@ def place_order(
     courier_comment = draft.courier_comment.strip()
 
     with transaction.atomic():
-        user, _ = User.objects.get_or_create(phone=phone)
-        if draft.name:
-            user.name = draft.name
-        if draft.email:
-            user.email = draft.email
-        user.save()
-
-        profile, _ = Profile.objects.get_or_create(user=user)
-        if address:
-            profile.default_address = address
-            profile.save()
+        customer = identify_customer(
+            phone,
+            CustomerData(name=draft.name, email=draft.email, default_address=address),
+        )
 
         order = Order.objects.create(
-            user=user,
+            user=customer,
             spec=spec,
             price_items=quote.items,
             subtotal=quote.subtotal,

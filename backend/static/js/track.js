@@ -15,14 +15,13 @@
         landing_path: window.location.pathname + window.location.search
     };
 
-    var meta = document.querySelector('meta[name="csrf-token"]');
     fetch('/api/track/visit/', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'X-CSRFToken': meta ? meta.content : ''
+            'X-CSRFToken': csrfToken()
         },
         body: JSON.stringify(body)
     }).catch(function () {

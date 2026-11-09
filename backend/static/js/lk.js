@@ -14,24 +14,8 @@ Vue.createApp({
             Email: '',
             Schema: {
                 // пустые имя и почта допустимы: после входа по телефону профиль создаётся без них
-                name_format: (value) => {
-                    if (!value) {
-                        return true;
-                    }
-                    if (!/^[a-zA-Zа-яА-ЯёЁ\s-]+$/.test(value)) {
-                        return '⚠ Недопустимые символы в имени';
-                    }
-                    return true;
-                },
-                email_format: (value) => {
-                    if (!value) {
-                        return true;
-                    }
-                    if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i.test(value)) {
-                        return '⚠ Формат почты нарушен';
-                    }
-                    return true;
-                }
+                name_format: BC.rules.name('⚠ Недопустимые символы в имени', {allowSpaces: true}),
+                email_format: BC.rules.email('⚠ Формат почты нарушен')
             }
         }
     },
@@ -60,8 +44,7 @@ Vue.createApp({
             this.Edit = false
         },
         async Logout() {
-            const data = await api('/api/auth/logout/', 'POST')
-            if (data.ok) window.location.href = '/'
+            await BC.logout()
         }
     }
 }).mount('#LK')

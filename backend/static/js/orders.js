@@ -108,8 +108,7 @@ Vue.createApp({
             form.text = ''
         },
         async Logout() {
-            const data = await api('/api/auth/logout/', 'POST')
-            if (data.ok) window.location.href = '/'
+            await BC.logout()
         }
     }
 }).mount('#Orders')

@@ -163,7 +163,7 @@
 							</div>
 							<div class="col-6 col-lg-4 d-flex flex-column">
 								<div class="position-relative pb-1">
-									<v-field v-model="Name" @blur="SaveProfile" :class="Name ? 'cake__border_blue': ''" type="text" name="name" id="name" placeholder="Введите ваше имя" class="form-control my-3 cake__textinput"></v-field>
+									<v-field v-model="Name" :class="Name ? 'cake__border_blue': ''" type="text" name="name" id="name" placeholder="Введите ваше имя" class="form-control my-3 cake__textinput"></v-field>
 									<v-field v-model="Name" type="text" name="name_format" class="d-none"></v-field>
 									<error-message name="name_format" class="position-absolute bottom-0 cake_pink fs_12"></error-message>
 								</div>
@@ -173,7 +173,7 @@
 									<error-message name="phone_format" class="position-absolute bottom-0 cake_pink fs_12"></error-message>
 								</div>
 								<div class="position-relative pb-1">
-									<v-field v-model="Email" @blur="SaveProfile" :class="Email ? 'cake__border_blue': ''" type="email" name="email" id="email" placeholder="Введите почту" class="form-control my-3 cake__textinput"></v-field>
+									<v-field v-model="Email" :class="Email ? 'cake__border_blue': ''" type="email" name="email" id="email" placeholder="Введите почту" class="form-control my-3 cake__textinput"></v-field>
 									<v-field v-model="Email" type="email" name="email_format" class="d-none"></v-field>
 									<error-message name="email_format" class="position-absolute bottom-0 cake_pink fs_12"></error-message>
 								</div>
@@ -217,9 +217,9 @@
 								<label for="time" class="my-1 fs_40 cake_blue">Время</label>
 							</div>
 							<div class="col-6 col-lg-4 d-flex flex-column">
-								<v-field v-model="Address" @blur="SaveProfile" :class="Address ? 'cake__border_blue': ''" type="text" name="address" id="address" placeholder="Введите ваш адрес" class="form-control my-3 cake__textinput"></v-field>
-								<v-field v-model="Dates" :class="Dates ? 'cake__border_blue': ''" type="date" name="date" id="date" placeholder="ДД.ММ.ГГ" class="form-control my-3 cake__textinput"></v-field>
-								<v-field v-model="Time" :class="Time ? 'cake__border_blue': ''" type="time" name="time" id="time" placeholder="00:00" class="form-control my-3 cake__textinput"></v-field>
+								<v-field v-model="Address" :class="Address ? 'cake__border_blue': ''" type="text" name="address" id="address" placeholder="Введите ваш адрес" class="form-control my-3 cake__textinput"></v-field>
+								<v-field v-model="Dates" :min="DatesMin" :class="Dates ? 'cake__border_blue': ''" type="date" name="date" id="date" placeholder="ДД.ММ.ГГ" class="form-control my-3 cake__textinput"></v-field>
+								<v-field v-model="Time" :min="TimeFrom" :max="TimeTo" :class="Time ? 'cake__border_blue': ''" type="time" name="time" id="time" placeholder="00:00" class="form-control my-3 cake__textinput"></v-field>
 							</div>
 						</div>
 						<div class="row mt-3">
@@ -251,6 +251,6 @@
 </main>
 {% endblock %}
 {% block scripts %}
-<script src="{% static 'js/configurator-draft.js' %}?v=20261111"></script>
-<script src="{% static 'js/index.js' %}?v=20261111"></script>
+<script src="{% static 'js/configurator-draft.js' %}?v=20261112"></script>
+<script src="{% static 'js/index.js' %}?v=20261112"></script>
 {% endblock %}

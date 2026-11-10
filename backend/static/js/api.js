@@ -1,5 +1,9 @@
 // Общий помощник для обращений к API. Формат ответа — {ok, errors|error, ...} (.agents/PLAN.md, раздел 4.1).
 function csrfToken() {
+    // Вход (в т.ч. при оформлении заказа гостем) ротирует CSRF-токен, поэтому
+    // сначала берём актуальное значение из cookie, а meta — только как запасной.
+    const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+    if (match) return decodeURIComponent(match[1]);
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.content : '';
 }

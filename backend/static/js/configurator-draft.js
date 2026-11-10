@@ -35,11 +35,18 @@
 
     function createState(groups) {
         return {
+            Config: null,
+            ConfigError: '',
             Designed: false,
             Catalog: [],
             CatalogError: '',
             CatalogOpen: false,
             SelectedCake: null,
+            Authed: false,
+            Hydrated: false,
+            SaveTimer: null,
+            QuoteTimer: null,
+            QuoteTicket: 0,
             Levels: null,
             Form: null,
             Topping: null,
@@ -55,7 +62,6 @@
             Dates: '',
             Time: '',
             DelivComments: '',
-            Cost: 0,
             Quote: null,
             QuoteError: '',
             OrderError: '',
@@ -64,6 +70,9 @@
             RushPercent: 20,
             ShowPayment: false,
             PdConsent: false,
+            DatesMin: '',
+            TimeFrom: '',
+            TimeTo: '',
             Groups: groups || [],
             Sel: defaultSel(groups),
         };
@@ -75,7 +84,6 @@
         state.Levels = state.Form = state.Topping = state.Berries = state.Decor = null;
         state.Words = state.Comments = state.Promo = '';
         state.Name = state.Phone = state.Email = state.Address = state.Dates = state.Time = state.DelivComments = '';
-        state.Cost = 0;
         state.Quote = null;
         state.QuoteError = state.OrderError = '';
         state.OrderPlaced = null;
@@ -86,19 +94,42 @@
         return state;
     }
 
-    function applyConfigDefaults(state, payload) {
-        (payload.defaults || []).forEach(function (d) {
-            state.Sel[d.code] = d.option_id;
-            if (d.code === 'levels') state.Levels = d.option_id;
-            if (d.code === 'form') state.Form = d.option_id;
-            if (d.code === 'topping') state.Topping = d.option_id;
+    function todayIso() {
+        var now = new Date();
+        var month = String(now.getMonth() + 1).padStart(2, '0');
+        var day = String(now.getDate()).padStart(2, '0');
+        return now.getFullYear() + '-' + month + '-' + day;
+    }
+
+    // Поля и префиксы id повторяют вёрстку: levels → lvls / num, остальные = code.
+    function mapGroup(group) {
+        return Object.assign({}, group, {
+            required: !!group.is_required,
+            field: group.code === 'levels' ? 'lvls' : group.code,
+            prefix: group.code === 'levels' ? 'num' : group.code,
         });
-        if (payload.rush_surcharge_percent != null) state.RushPercent = payload.rush_surcharge_percent;
+    }
+
+    function applyConfig(state, payload) {
+        var delivery = payload.delivery || {};
+        state.Config = payload;
+        state.Groups = (payload.groups || []).map(mapGroup);
+        state.Sel = defaultSel(state.Groups);
+        state.DatesMin = todayIso();
+        state.TimeFrom = delivery.from || '';
+        state.TimeTo = delivery.to || '';
+        if (delivery.rush_surcharge_percent != null) {
+            state.RushPercent = delivery.rush_surcharge_percent;
+        }
         return state;
     }
 
     function isConfigured(state) {
-        return !!(state.SelectedCake || (state.Levels && state.Topping));
+        if (state.SelectedCake) return true;
+        if (!state.Config) return false;
+        return (state.Config.groups || []).every(function (g) {
+            return !g.is_required || !!state.Sel[g.code];
+        });
     }
 
     function findGroup(state, code) {
@@ -107,66 +138,74 @@
 
     function labelFor(state, code) {
         var group = findGroup(state, code);
-        if (!group) return '—';
-        var option = group.options.find(function (o) { return o.id === state.Sel[code]; });
-        return option ? option.title : '—';
+        if (!group) return 'не выбрано';
+        var option = (group.options || []).find(function (o) { return o.id === state.Sel[code]; });
+        return option ? option.title : 'не выбрано';
+    }
+
+    function specBody(state) {
+        var spec = {};
+        (state.Groups || []).forEach(function (g) {
+            if (state.Sel[g.code]) spec[g.code] = state.Sel[g.code];
+        });
+        var inscription = trimStr(state.Words);
+        if (inscription) spec.inscription = inscription;
+        return spec;
     }
 
     function quoteBody(state) {
-        var body = {
-            promo_code: state.Promo,
+        // null, пока серверу нечего считать: нужны дата и время, а для своего
+        // торта — ещё и все обязательные группы.
+        if (!state.Dates || !state.Time) return null;
+        if (state.SelectedCake) {
+            return {
+                cake_id: state.SelectedCake.id,
+                delivery_date: state.Dates,
+                delivery_time: state.Time,
+                promo_code: state.Promo,
+            };
+        }
+        if (!isConfigured(state)) return null;
+        return {
+            spec: specBody(state),
             delivery_date: state.Dates,
             delivery_time: state.Time,
-            delivery_mode: 'courier',
+            promo_code: state.Promo,
         };
-        if (state.SelectedCake) {
-            body.cake_id = state.SelectedCake.id;
-        } else {
-            body.levels = state.Levels;
-            body.topping = state.Topping;
-            if (state.Berries) body.berries = state.Berries;
-            if (state.Decor) body.decor = state.Decor;
-            body.words = state.Words;
-            body.comment = state.Comments;
-        }
-        return body;
     }
 
     function orderBody(state) {
         var body = {
-            promo_code: state.Promo,
-            name: state.Name,
-            phone: state.Phone,
-            email: state.Email,
-            address: state.Address,
-            comment: state.Comments,
-            courier_comment: state.DelivComments,
+            name: trimStr(state.Name),
+            phone: trimStr(state.Phone),
+            email: trimStr(state.Email),
+            address: trimStr(state.Address),
             delivery_date: state.Dates,
             delivery_time: state.Time,
-            delivery_mode: 'courier',
+            comment: trimStr(state.Comments),
+            courier_comment: trimStr(state.DelivComments),
+            promo_code: trimStr(state.Promo),
             pd_consent: !!state.PdConsent,
         };
         if (state.SelectedCake) {
             body.cake_id = state.SelectedCake.id;
-            body.detail = state.SelectedCake.description || '';
-            if (state.SelectedCake.spec) body.spec = state.SelectedCake.spec;
         } else {
-            body.spec = {
-                levels: state.Levels,
-                levels_title: labelFor(state, 'levels'),
-                form: state.Form,
-                form_title: labelFor(state, 'form'),
-                topping: state.Topping,
-                topping_title: labelFor(state, 'topping'),
-                berries: state.Berries,
-                berries_title: labelFor(state, 'berries'),
-                decor: state.Decor,
-                decor_title: labelFor(state, 'decor'),
-                words: state.Words,
-                comment: state.Comments,
-            };
+            body.spec = specBody(state);
         }
         return body;
+    }
+
+    function previewCost(state) {
+        if (state.Quote) return state.Quote.total;
+        if (state.SelectedCake) return state.SelectedCake.price;
+        if (!state.Config) return 0;
+        var sum = 0;
+        (state.Config.groups || []).forEach(function (g) {
+            var option = (g.options || []).find(function (o) { return o.id === state.Sel[g.code]; });
+            if (option) sum += option.price_delta;
+        });
+        if (trimStr(state.Words)) sum += state.Config.inscription_price || 0;
+        return sum;
     }
 
     function readRepeat(sessionStorage) {
@@ -187,26 +226,25 @@
         if (!item) return state;
         state.SelectedCake = null;
         state.Sel = defaultSel(state.Groups);
-        state.CatalogOpen = true;
-        if (item.cake_id) {
-            var found = (state.Catalog || []).find(function (c) { return c.id === item.cake_id; }) || null;
-            if (found) {
-                state.SelectedCake = Object.assign({}, found, {spec: item.spec || null, detail: item.detail || ''});
+        state.Quote = null;
+        state.QuoteError = '';
+        var cakeId = typeof item.cake === 'number' ? item.cake : item.cake_id;
+        if (typeof cakeId === 'number') {
+            // Готовый торт: Order.spec хранит {"cake": id}.
+            var cake = (state.Catalog || []).find(function (c) { return c.id === cakeId; }) || null;
+            if (cake) {
+                state.SelectedCake = cake;
+                state.Designed = true;
             }
-        } else if (item.spec) {
-            var spec = item.spec;
-            state.Levels = spec.levels || null;
-            state.Topping = spec.topping || null;
-            state.Berries = spec.berries || null;
-            state.Decor = spec.decor || null;
-            state.Sel.levels = spec.levels || null;
-            state.Sel.form = spec.form || null;
-            state.Sel.topping = spec.topping || null;
-            state.Sel.berries = spec.berries || null;
-            state.Sel.decor = spec.decor || null;
-            state.Words = spec.words || '';
-            state.Comments = spec.comment || '';
+            return state;
         }
+        // Свой торт: в spec лежат коды групп и надпись. Опция могла исчезнуть —
+        // тогда группу не трогаем.
+        (state.Groups || []).forEach(function (g) {
+            var option = (g.options || []).find(function (o) { return o.id === item[g.code]; });
+            if (option) state.Sel[g.code] = option.id;
+        });
+        if (typeof item.inscription === 'string') state.Words = item.inscription;
         return state;
     }
 
@@ -261,9 +299,10 @@
         REPEAT_KEY: REPEAT_KEY,
         createState: createState,
         resetState: resetState,
-        applyConfigDefaults: applyConfigDefaults,
+        applyConfig: applyConfig,
         isConfigured: isConfigured,
         labelFor: labelFor,
+        previewCost: previewCost,
         quoteBody: quoteBody,
         orderBody: orderBody,
         readRepeat: readRepeat,

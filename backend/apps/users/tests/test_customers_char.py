@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 
 import pytest
+from django.conf import settings
 from django.utils import timezone
 
 from apps.orders.models import Order
@@ -31,6 +32,7 @@ def _order_body(**overrides):
         "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
         "delivery_time": "15:00",
         "spec": _groups(),
+        "pd_consent": True,
     }
     body.update(overrides)
     return body
@@ -53,6 +55,31 @@ def test_login_matches_existing_customer_across_phone_formats(client):
     _login(client, "+7 900 777 66 55")
 
     assert User.objects.count() == 1
+
+
+@pytest.mark.django_db
+def test_login_records_pd_consent_when_checked(client):
+    resp = client.post(
+        "/api/auth/login/",
+        data=json.dumps({"phone": "+79007776655", "consent_pdp": True}),
+        content_type="application/json",
+        HTTP_X_FORWARDED_FOR="5.6.7.8",
+    )
+
+    assert resp.json()["ok"] is True
+    profile = Profile.objects.get(user__phone="+79007776655")
+    assert profile.consent_pdp_at is not None
+    assert profile.consent_pdp_ip == "5.6.7.8"
+    assert profile.pd_version == settings.PD_VERSION
+
+
+@pytest.mark.django_db
+def test_login_without_consent_does_not_record_pd(client):
+    _login(client, "+79007776655")
+
+    profile = Profile.objects.get(user__phone="+79007776655")
+    assert profile.consent_pdp_at is None
+    assert profile.pd_version == ""
 
 
 @pytest.mark.django_db

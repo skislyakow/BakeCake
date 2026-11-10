@@ -28,6 +28,7 @@ def _place(client, **overrides):
         "spec": {"levels": o1.pk, "form": o2.pk, "topping": o3.pk, "inscription": "Привет"},
         "comment": "к заказу",
         "courier_comment": "курьеру",
+        "pd_consent": True,
     }
     body.update(overrides)
     return client.post("/api/orders/", data=json.dumps(body), content_type="application/json")

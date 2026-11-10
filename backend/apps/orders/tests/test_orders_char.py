@@ -234,6 +234,7 @@ def test_create_order_creates_user_profile_order_event_pd_utm(client):
                 "delivery_time": "15:00",
                 "spec": _spec(g),
                 "comment": "тест",
+                "pd_consent": True,
             }
         ),
         content_type="application/json",
@@ -262,6 +263,7 @@ def test_create_order_accepts_numeric_phone(client):
                 "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
                 "delivery_time": "16:00",
                 "spec": _spec(g),
+                "pd_consent": True,
             }
         ),
         content_type="application/json",
@@ -269,6 +271,29 @@ def test_create_order_accepts_numeric_phone(client):
     data = resp.json()
     assert data["ok"] is True
     assert Order.objects.get(number=data["number"]).user.phone in ("89001234567", "+79001234567")
+
+
+@pytest.mark.django_db
+def test_create_order_without_pd_consent_is_rejected(client):
+    g = _setup_base_groups()
+    resp = client.post(
+        "/api/orders/",
+        data=json.dumps(
+            {
+                "phone": "+79001234567",
+                "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
+                "delivery_time": "15:00",
+                "spec": _spec(g),
+            }
+        ),
+        content_type="application/json",
+    )
+    data = resp.json()
+    assert data["ok"] is False
+    assert data["errors"] == {
+        "pd_consent": "Подтвердите согласие на обработку персональных данных"
+    }
+    assert Order.objects.count() == 0
 
 
 @pytest.mark.django_db
@@ -284,6 +309,7 @@ def test_create_order_with_cake_id_invalid_falls_back_to_spec(client):
                 "delivery_time": "16:00",
                 "cake_id": 9999,
                 "spec": _spec(g),
+                "pd_consent": True,
             }
         ),
         content_type="application/json",

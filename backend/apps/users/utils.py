@@ -15,3 +15,9 @@ def normalize_phone(value):
     if len(digits) == 11 and digits[:1] == "7":
         return "+" + digits
     return raw
+
+
+def request_ip(request):
+    """IP клиента с учётом прокси; пустая строка, если заголовков нет."""
+    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+    return forwarded or request.META.get("REMOTE_ADDR", "")

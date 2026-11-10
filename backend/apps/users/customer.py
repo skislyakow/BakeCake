@@ -1,7 +1,9 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 
 from django.db import transaction
+from django.utils import timezone
 
 from .models import Profile, User
 from .utils import normalize_phone
@@ -51,6 +53,22 @@ def identify_customer(phone: str, data: CustomerData | None = None) -> User:
                 profile.save(update_fields=["default_address"])
 
     return user
+
+
+def record_consent(
+    user: User,
+    *,
+    ip: str = "",
+    version: str = "",
+    now: datetime | None = None,
+) -> Profile:
+    """Фиксирует согласие на ПД в профиле: дату, IP и версию документа."""
+    profile, _ = Profile.objects.get_or_create(user=user)
+    profile.consent_pdp_at = now or timezone.now()
+    profile.consent_pdp_ip = ip or None
+    profile.pd_version = version
+    profile.save(update_fields=["consent_pdp_at", "consent_pdp_ip", "pd_version"])
+    return profile
 
 
 def edit_customer(user: User, changes: Mapping[str, object]) -> Profile:

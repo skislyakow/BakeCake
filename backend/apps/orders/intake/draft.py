@@ -35,6 +35,14 @@ def _as_str(value: Any) -> str:
     return ""
 
 
+def _as_bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return value == 1
+
+
 def parse_draft(payload: dict[str, Any] | None) -> OrderDraft:
     """Переводит тело запроса в типизированный черновик заказа (без обращения к БД)."""
     payload = payload or {}
@@ -57,5 +65,6 @@ def parse_draft(payload: dict[str, Any] | None) -> OrderDraft:
         address=_as_str(payload.get("address")),
         comment=_as_str(payload.get("comment")),
         courier_comment=_as_str(payload.get("courier_comment")),
+        pd_consent=_as_bool(payload.get("pd_consent")),
         spec_raw=spec_raw,
     )

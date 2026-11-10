@@ -7,7 +7,7 @@
 
 		<article class="row position-relative">
 			<div class="col-12 col-xxl-6 d-flex justify-content-center">
-				<img src="{% static 'img/Cake.png' %}" alt="">
+				<img src="{% static 'img/Cake.png' %}" alt="Торт ручной работы" width="601" height="421" fetchpriority="high">
 			</div>
 			<div class="col-12 col-xxl-6 d-flex flex-column justify-content-center align-items-center align-items-xxl-start">
 				<h1 class="font_Gogh fs_40 cake_blue">Создайте торт своей мечты</h1>
@@ -17,7 +17,7 @@
 			<div class="position-fixed bottom-0 m-5 w-auto end-0">
 				<div class="d-flex">
 					<div class="cake__bg_blue rounded-pill p-3 border">
-						<img src="{% static 'img/intercom.svg' %}" alt="">
+						<img src="{% static 'img/intercom.svg' %}" alt="" width="27" height="28" loading="lazy">
 					</div>
 				</div>
 			</div>
@@ -29,21 +29,21 @@
 			<div class="col-12 col-sm-6 col-lg-4 d-flex flex-column align-items-center">
 				<div class="card border-0 cake__hover">
 					<a href="#" class="card-img-overlay"></a>
-					<img src="{% static 'img/image1.png' %}" alt="" class="">
+					<img src="{% static 'img/image1.png' %}" alt="Торт на чаепитие" width="255" height="281" loading="lazy" class="">
 					<span class="cake_blue mt-4 fw-lighter mb-4 text-center">На чаепитие</span>
 				</div>
 			</div>
 			<div class="col-12 col-sm-6 col-lg-4 d-flex flex-column align-items-center">
 				<div class="card border-0 cake__hover">
 					<a href="#" class="card-img-overlay"></a>
-					<img src="{% static 'img/image2.png' %}" alt="" class="">
+					<img src="{% static 'img/image2.png' %}" alt="Торт на день рождения" width="255" height="281" loading="lazy" class="">
 					<span class="cake_blue mt-4 fw-lighter mb-4 text-center">На день рождения</span>
 				</div>
 			</div>
 			<div class="col-12 col-sm-6 col-lg-4 d-flex flex-column align-items-center">
 				<div class="card border-0 cake__hover">
 					<a href="#" class="card-img-overlay"></a>
-					<img src="{% static 'img/image3.png' %}" alt="" class="">
+					<img src="{% static 'img/image3.png' %}" alt="Торт на свадьбу" width="255" height="281" loading="lazy" class="">
 					<span class="cake_blue mt-4 fw-lighter mb-4 text-center">На свадьбу</span>
 				</div>
 			</div>
@@ -57,7 +57,7 @@
 					<template v-for="cake in Catalog" :key="cake.id">
 						<div class="col-12 col-sm-6 col-lg-4 d-flex flex-column align-items-center">
 							<div class="card border-0 cake__hover">
-								<img :src="cake.image_url" alt="" class="">
+								<img :src="cake.image_url" :alt="cake.name" width="255" height="281" loading="lazy" class="">
 								<span class="cake_blue mt-4 fw-lighter mb-1 text-center">{% verbatim %}{{ cake.name }}{% endverbatim %}</span>
 								<span class="cake_grey fw-lighter mb-2 text-center">от {% verbatim %}{{ cake.price }}{% endverbatim %}₽</span>
 								<button @click="SelectCake(cake)" class="btn text-white rounded-pill px-4 mx-auto shadow-none mb-4 cake__button cake__bg_pink">Выбрать</button>
@@ -72,21 +72,21 @@
 			<h2 class="font_Gogh fs_40 cake_blue text-center mb-5">Оплата и доставка</h2>
 			<div class="col-12 col-sm-6 col-lg-4 d-flex flex-column align-items-center">
 				<div class="d-flex align-items-center" style="height: 120px">
-					<img src="{% static 'img/clock.svg' %}" alt="">
+					<img src="{% static 'img/clock.svg' %}" alt="" width="146" height="110" loading="lazy">
 				</div>
 				<span class="cake_blue mt-4 fw-lighter">Изготовление 24 ч.</span>
 				<p class="cake_grey mt-3">Срочный заказ (менее 24 ч.) увеличивает стоимость заказа на 20%</p>
 			</div>
 			<div class="col-12 col-sm-6 col-lg-4 d-flex flex-column align-items-center">
 				<div class="d-flex align-items-center" style="height: 120px">
-					<img src="{% static 'img/card.svg' %}" alt="">
+					<img src="{% static 'img/card.svg' %}" alt="" width="146" height="122" loading="lazy">
 				</div>
 				<span class="cake_blue mt-4 fw-lighter">100% предоплата</span>
 				<p class="cake_grey mt-3">Оплата осуществляется банковской картой или в нашем ресторане наличными</p>
 			</div>
 			<div class="col-12 col-sm-6 col-lg-4 d-flex flex-column align-items-center">
 				<div class="d-flex align-items-center" style="height: 120px">
-					<img src="{% static 'img/deliv.svg' %}" alt="">
+					<img src="{% static 'img/deliv.svg' %}" alt="" width="134" height="134" loading="lazy">
 				</div>
 				<span class="cake_blue mt-4 fw-lighter">Доставка по Москве</span>
 				<p class="cake_grey mt-3">Готовый заказ доставят по адресу в заявке с 10:00 до 23:00 в пределах МКАД</p>
@@ -101,16 +101,21 @@
 				<h2 class="font_Gogh fs_40 cake_blue text-center">Создать свой торт</h2>
 				<p v-if="ConfigError" class="cake_pink text-center">{% verbatim %}{{ ConfigError }}{% endverbatim %}</p>
 				<v-form :validation-schema="schema1" @submit="ToStep4">
+					<div class="cake__sticky d-flex d-sm-none align-items-center justify-content-between">
+						<span class="fs_40 cake_pink">{% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
+						<span v-if="IsRush" class="cake_pink fs_12">{% verbatim %}+{{ RushPercent }}%{% endverbatim %}</span>
+						<button type="submit" class="btn text-white rounded-pill px-4 shadow-none cake__button cake__bg_pink">Далее</button>
+					</div>
 					<div class="d-flex justify-content-end align-items-center position-relative">
-				<span class="cake_pink position-absolute start-0 top-50">
+				<span class="cake__form-errors cake_pink position-absolute start-0 top-50">
 					<error-message name="lvls" class="from__alert"></error-message>
 					<error-message name="form" class="from__alert"></error-message>
 					<error-message name="topping" class="from__alert"></error-message>
 				</span>
-						<span v-if="IsRush" class="cake_pink me-3 mt-5">{% verbatim %}Срочный заказ, +{{ RushPercent }}%{% endverbatim %}</span>
-						<span class="z-index-1 fs_40 cake_pink text-end mt-5" id="cost">{% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
+						<span v-if="IsRush" class="cake_pink me-3 mt-5 d-none d-sm-inline">{% verbatim %}Срочный заказ, +{{ RushPercent }}%{% endverbatim %}</span>
+						<span class="z-index-1 fs_40 cake_pink text-end mt-5 d-none d-sm-inline" id="cost">{% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
 					</div>
-					<div v-for="g in Required" :key="g.code" class="d-flex align-items-center flex-wrap mb-3">
+					<div v-for="g in Required" :key="g.code" class="cake__group d-flex align-items-center flex-wrap mb-3">
 						<span class="me-3 fs_40 cake_blue">{% verbatim %}{{ g.title }}{% endverbatim %}</span>
 						<template v-for="(o, i) in g.options" :key="o.id">
 							<v-field v-model="Sel[g.code]" type="radio" :name="g.field" :id="g.prefix + (i + 1)" :value="o.id" class="d-none cake__input"></v-field>
@@ -118,7 +123,7 @@
 						</template>
 					</div>
 					<h1 class="me-3 fs_40 cake_pink mb-3 mt-5">Дополнительно</h1>
-					<div v-for="g in Extra" :key="g.code" class="d-flex align-items-center flex-wrap mb-3">
+					<div v-for="g in Extra" :key="g.code" class="cake__group d-flex align-items-center flex-wrap mb-3">
 						<span class="me-3 fs_40 cake_blue">{% verbatim %}{{ g.title }}{% endverbatim %}</span>
 						<template v-for="(o, i) in g.options" :key="o.id">
 							<v-field v-model="Sel[g.code]" type="radio" :name="g.field" :id="g.prefix + (i + 1)" :value="o.id" class="d-none cake__input"></v-field>
@@ -149,7 +154,7 @@
 					<div class="col">
 						<div class="d-flex flex-column position-relative pb-5">
 							<h2 class="fs_40 font_Gogh cake_blue text-center align-self-center">Оформление заказа</h2>
-							<span class="cake_pink mt-2 position-absolute bottom-0">
+							<span class="cake__form-errors cake_pink mt-2 position-absolute bottom-0">
 								<error-message name="name" class="from__alert"></error-message>
 								<error-message name="phone" class="from__alert"></error-message>
 								<error-message name="email" class="from__alert"></error-message>
@@ -202,7 +207,7 @@
 						</div>
 						<div class="d-flex flex-column position-relative pb-4">
 							<h2 class="fs_40 cake_pink">Данные для доставки</h2>
-							<span class="cake_pink mt-2 position-absolute bottom-0">
+							<span class="cake__form-errors cake_pink mt-2 position-absolute bottom-0">
 								<error-message name="address" class="from__alert"></error-message>
 								<error-message name="date" class="from__alert"></error-message>
 								<error-message name="time" class="from__alert"></error-message>

@@ -1,0 +1,50 @@
+/* Телефон: широкие таблицы админки прокручиваются по горизонтали, а не ломают макет. */
+@media (max-width: 767.98px) {
+    #container {
+        min-width: 0;
+    }
+    #content {
+        padding: 10px;
+    }
+    .module,
+    .results,
+    #changelist,
+    .changelist-form-container,
+    .inline-group {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .module table,
+    .results table,
+    .inline-group table {
+        min-width: 640px;
+    }
+    #changelist-filter {
+        position: static;
+        width: auto;
+        margin: 0 0 12px;
+    }
+    .submit-row {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    fieldset.aligned .form-row {
+        display: block;
+        padding: 8px;
+    }
+    fieldset.aligned .form-row > div {
+        width: auto;
+    }
+    .aligned label {
+        display: block;
+        width: auto;
+        padding: 0 0 4px;
+    }
+    .aligned .vTextField,
+    .aligned .vURLField,
+    .aligned textarea,
+    .aligned select {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}

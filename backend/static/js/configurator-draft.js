@@ -2,7 +2,6 @@
 // Компонент Vue в index.js остаётся тонкой привязкой к DOM, таймерам и api().
 (function (global) {
     var REPEAT_KEY = 'bc_repeat';
-    var PROFILE_KEY = 'bc_profile';
 
     var PHONE_RE = /^\+?\d[\d\s\-()]{6,}$/;
     var EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
@@ -17,15 +16,6 @@
             return storage ? storage.getItem(key) : null;
         } catch (e) {
             return null;
-        }
-    }
-
-    function storageSet(storage, key, value) {
-        try {
-            if (storage) storage.setItem(key, value);
-            return true;
-        } catch (e) {
-            return false;
         }
     }
 
@@ -220,20 +210,6 @@
         return state;
     }
 
-    function readProfile(localStorage) {
-        var raw = storageGet(localStorage, PROFILE_KEY);
-        if (!raw) return null;
-        try {
-            return JSON.parse(raw);
-        } catch (e) {
-            return null;
-        }
-    }
-
-    function writeProfile(localStorage, profile) {
-        return storageSet(localStorage, PROFILE_KEY, JSON.stringify(profile || {}));
-    }
-
     var validators = {
         required: function (message) {
             return function (value) {
@@ -283,7 +259,6 @@
 
     var api = {
         REPEAT_KEY: REPEAT_KEY,
-        PROFILE_KEY: PROFILE_KEY,
         createState: createState,
         resetState: resetState,
         applyConfigDefaults: applyConfigDefaults,
@@ -294,8 +269,6 @@
         readRepeat: readRepeat,
         clearRepeat: clearRepeat,
         applyRepeat: applyRepeat,
-        readProfile: readProfile,
-        writeProfile: writeProfile,
         validators: validators,
         schema1: schema1,
         schema2: schema2,

@@ -63,6 +63,7 @@ Vue.createApp({
             Name: '', Phone: '', Email: '', Address: '', Dates: '', Time: '', DelivComments: '',
             Cost: 0, Quote: null, QuoteError: '', OrderError: '', OrderPlaced: null,
             Submitting: false, RushPercent: 20, ShowPayment: false, PdConsent: false,
+            Authenticated: false,
             Groups: [], Sel: {},
         }, {
             schema1: schema1,
@@ -85,6 +86,7 @@ Vue.createApp({
         },
     },
     mounted() {
+        this.LoadProfile();
         this.LoadCatalog();
         this.LoadConfig();
     },
@@ -125,15 +127,6 @@ Vue.createApp({
             this.Groups.forEach(function (g) { self.Sel[g.code] = null; });
             BC.draft.applyConfigDefaults(this, data);
 
-            try {
-                var saved = BC.draft.readProfile(localStorage);
-                if (saved) {
-                    this.Name = saved.name || '';
-                    this.Phone = saved.phone || '';
-                    this.Email = saved.email || '';
-                }
-            } catch (e) {}
-
             this.ApplyRepeat();
 
             const cakeId = parseInt(new URLSearchParams(location.search).get('cake'), 10);
@@ -146,6 +139,32 @@ Vue.createApp({
             if (!item) return;
             BC.draft.clearRepeat(sessionStorage);
             BC.draft.applyRepeat(this, item);
+        },
+        async LoadProfile() {
+            // Вошедшему подставляем данные профиля; гостю оставляем поля пустыми.
+            const me = await api('/api/me/');
+            if (!me.ok) return;
+            this.Authenticated = true;
+            this.Name = me.name || '';
+            this.Phone = me.phone || '';
+            this.Email = me.email || '';
+            this.Address = me.default_address || '';
+            if (!this.Address) await this.LoadLastAddress();
+        },
+        async LoadLastAddress() {
+            // Нет адреса по умолчанию — берём адрес самого свежего заказа.
+            const data = await api('/api/orders/');
+            if (data.ok && data.items && data.items.length) {
+                this.Address = data.items[0].address || '';
+            }
+        },
+        async SaveProfile() {
+            if (!this.Authenticated) return;
+            await api('/api/me/', 'PATCH', {
+                name: this.Name,
+                email: this.Email,
+                default_address: this.Address,
+            });
         },
         ToStep4() {
             this.Designed = true;
@@ -189,9 +208,6 @@ Vue.createApp({
                 return;
             }
 
-            try {
-                BC.draft.writeProfile(localStorage, {name: this.Name, phone: this.Phone, email: this.Email});
-            } catch (e) {}
             this.OrderPlaced = data.number;
             if (data.payment_url) {
                 try { localStorage.setItem('bc_paid', JSON.stringify({number: data.number, ts: Date.now()})); } catch (e) {}

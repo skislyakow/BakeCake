@@ -66,6 +66,7 @@ class OrderDraft:
     address: str = ""
     comment: str = ""
     courier_comment: str = ""
+    pd_consent: bool = False
     spec_raw: dict[str, Any] | None = None
 
 

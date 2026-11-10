@@ -132,7 +132,7 @@ def start_payment(order: Order, *, return_url: str, gateway: PaymentGateway | No
         return payment
 
 
-def mark_paid(payment: Payment) -> None:
+def mark_paid(payment: Payment, *, event_text: str = "Оплата получена") -> None:
     """Отмечает платёж и заказ оплаченными. Идемпотентно."""
     with transaction.atomic():
         payment = Payment.objects.select_related("order").get(pk=payment.pk)
@@ -141,10 +141,32 @@ def mark_paid(payment: Payment) -> None:
             payment.save(update_fields=["status"])
 
         order = payment.order
-        if order.status != Order.Status.PAID:
+        if order.status == Order.Status.NEW:
             order.status = Order.Status.PAID
             order.save(update_fields=["status"])
-            OrderEvent.objects.create(order=order, kind=OrderEvent.Kind.PAID, text="Оплата получена")
+            OrderEvent.objects.create(order=order, kind=OrderEvent.Kind.PAID, text=event_text)
+
+
+def mark_order_paid(order: Order, *, manual: bool = False) -> bool:
+    """Резерв на случай потерянного вебхука: переводит `new → paid` вручную.
+
+    Возвращает `False`, если заказ уже оплачен или выполнен: переход не
+    откатывает статус назад.
+    """
+    event_text = "Оплата подтверждена вручную" if manual else "Оплата получена"
+    with transaction.atomic():
+        order = Order.objects.get(pk=order.pk)
+        if order.status != Order.Status.NEW:
+            return False
+
+        payment = Payment.objects.filter(order=order).order_by("-created").first()
+        if payment is not None:
+            mark_paid(payment, event_text=event_text)
+        else:
+            order.status = Order.Status.PAID
+            order.save(update_fields=["status"])
+            OrderEvent.objects.create(order=order, kind=OrderEvent.Kind.PAID, text=event_text)
+    return True
 
 
 def handle_webhook(payload: dict[str, Any]) -> Payment | None:

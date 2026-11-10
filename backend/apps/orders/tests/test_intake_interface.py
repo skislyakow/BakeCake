@@ -40,6 +40,7 @@ def _payload(**overrides):
         "spec": {code: option.pk for code, option in choices.items()},
         "delivery_date": (timezone.localdate() + timedelta(days=2)).isoformat(),
         "delivery_time": "15:00",
+        "pd_consent": True,
     }
     payload.update(overrides)
     return payload, choices
@@ -166,6 +167,20 @@ def test_place_order_with_unknown_cake_falls_back_to_spec():
 
     assert placed.order.spec == {code: option.pk for code, option in choices.items()}
     assert placed.order.subtotal == 800
+
+
+@pytest.mark.django_db
+def test_place_order_requires_pd_consent():
+    payload, _ = _payload(pd_consent=False)
+    draft = parse_draft(payload)
+
+    with pytest.raises(OrderIntakeError) as exc:
+        place_order(draft, _context())
+
+    assert exc.value.errors == {
+        "pd_consent": "Подтвердите согласие на обработку персональных данных"
+    }
+    assert Order.objects.count() == 0
 
 
 @pytest.mark.django_db

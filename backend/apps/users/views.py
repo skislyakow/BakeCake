@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import (
     login as auth_login,
     logout as auth_logout,
@@ -6,8 +7,16 @@ from rest_framework import status as http_status
 from rest_framework.decorators import api_view
 
 from config.responses import fail, ok
-from .customer import customer_profile, edit_customer, identify_customer
-from .utils import normalize_phone
+from .customer import customer_profile, edit_customer, identify_customer, record_consent
+from .utils import normalize_phone, request_ip
+
+
+def _truthy(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return value == 1
 
 
 @api_view(["POST"])
@@ -16,6 +25,12 @@ def login(request):
     if not phone:
         return fail({"phone": "Введите номер телефона"})
     user = identify_customer(phone)
+    if _truthy(request.data.get("consent_pdp")):
+        record_consent(
+            user,
+            ip=request_ip(request),
+            version=getattr(settings, "PD_VERSION", ""),
+        )
     auth_login(request, user)
     return ok(
         user={

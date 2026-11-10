@@ -1,9 +1,13 @@
 import html
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.http import HttpResponseRedirect
 from django.utils.safestring import mark_safe
 
+from apps.payments.gateway import mark_order_paid
+
 from .composition import describe
+from .lifecycle import mark_delivered, record_reschedule
 from .models import Issue, Order, OrderEvent
 
 
@@ -38,8 +42,9 @@ class OrderAdmin(admin.ModelAdmin):
     )
     date_hierarchy = "delivery_date"
     ordering = ("delivery_date", "delivery_time")
-    readonly_fields = ("number", "created", "subtotal", "rush_amount", "is_rush", "spec_display")
+    readonly_fields = ("number", "status", "created", "subtotal", "rush_amount", "is_rush", "spec_display")
     inlines = [OrderEventInline]
+    actions = ("mark_paid_action", "mark_delivered_action")
     fieldsets = (
         (
             "Заказ",
@@ -106,6 +111,55 @@ class OrderAdmin(admin.ModelAdmin):
     @admin.display(description="срочный", boolean=True, ordering="is_rush")
     def rush_mark(self, obj):
         return obj.is_rush
+
+    @admin.action(description="Отметить оплаченным (резерв при потерянном вебхуке)")
+    def mark_paid_action(self, request, queryset):
+        changed = sum(1 for order in queryset if mark_order_paid(order, manual=True))
+        self.message_user(request, f"Отмечено оплаченным: {changed}", messages.SUCCESS)
+
+    @admin.action(description="Отметить выполненным (только оплаченные)")
+    def mark_delivered_action(self, request, queryset):
+        changed = 0
+        skipped = 0
+        for order in queryset:
+            if order.status != Order.Status.PAID:
+                skipped += 1
+                continue
+            if mark_delivered(order):
+                changed += 1
+        self.message_user(request, f"Отмечено выполненным: {changed}", messages.SUCCESS)
+        if skipped:
+            self.message_user(
+                request,
+                f"Пропущено (не оплачены): {skipped}",
+                messages.WARNING,
+            )
+
+    def save_model(self, request, obj, form, change):
+        if change:
+            old = Order.objects.get(pk=obj.pk)
+            record_reschedule(obj, old.delivery_date, old.delivery_time)
+        super().save_model(request, obj, form, change)
+
+    def response_change(self, request, obj):
+        if "_mark_paid" in request.POST:
+            if mark_order_paid(obj, manual=True):
+                self.message_user(request, "Заказ отмечен оплаченным", messages.SUCCESS)
+            else:
+                self.message_user(request, "Заказ уже оплачен или выполнен", messages.WARNING)
+            return HttpResponseRedirect(request.path)
+        if "_mark_delivered" in request.POST:
+            if obj.status != Order.Status.PAID:
+                self.message_user(
+                    request,
+                    "Выполненным можно отметить только оплаченный заказ",
+                    messages.ERROR,
+                )
+            else:
+                mark_delivered(obj)
+                self.message_user(request, "Заказ отмечен выполненным", messages.SUCCESS)
+            return HttpResponseRedirect(request.path)
+        return super().response_change(request, obj)
 
 
 @admin.register(OrderEvent)

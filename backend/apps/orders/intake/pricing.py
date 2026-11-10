@@ -190,6 +190,8 @@ def place_order(
     phone = normalize_phone(draft.phone) or normalize_phone(getattr(context.actor, "phone", "") or "")
     if not phone:
         raise OrderIntakeError({"phone": "Введите номер телефона"})
+    if not draft.pd_consent:
+        raise OrderIntakeError({"pd_consent": "Подтвердите согласие на обработку персональных данных"})
 
     quote, spec = _price(draft, rules or parse_rules(), now)
 

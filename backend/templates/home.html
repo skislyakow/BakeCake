@@ -234,6 +234,10 @@
 									<span class="cake_pink fs_40 fw-bold me-2">Итого: {% verbatim %}{{ Cost }}{% endverbatim %}₽</span>
 								</div>
 								<input v-model="Promo" placeholder="Промокод" class="form-control cake__textinput mt-3" style="max-width: 260px">
+								<label class="d-flex align-items-start mt-3 cake_grey fs_12 text-md-end" style="max-width: 320px">
+									<input v-model="PdConsent" type="checkbox" class="form-check-input me-2 mt-1">
+									<span>Согласен на обработку персональных данных</span>
+								</label>
 								<button type="submit" :disabled="Submitting" class="btn btn_hover text-white rounded-pill mt-3 px-5 shadow-none cake__button cake__bg_pink">К оплате</button>
 								<small v-if="OrderError" class="fs_12 cake_pink mt-2 text-end">{% verbatim %}{{ OrderError }}{% endverbatim %}</small>
 								<small v-if="OrderPlaced" class="fs_12 cake_blue mt-2 text-end fw-bold">Заказ №{% verbatim %}{{ OrderPlaced }}{% endverbatim %} принят</small>
@@ -247,6 +251,6 @@
 </main>
 {% endblock %}
 {% block scripts %}
-<script src="{% static 'js/configurator-draft.js' %}?v=20261109"></script>
-<script src="{% static 'js/index.js' %}?v=20261109"></script>
+<script src="{% static 'js/configurator-draft.js' %}?v=20261110"></script>
+<script src="{% static 'js/index.js' %}?v=20261110"></script>
 {% endblock %}

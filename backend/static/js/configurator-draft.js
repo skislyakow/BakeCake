@@ -73,6 +73,7 @@
             Submitting: false,
             RushPercent: 20,
             ShowPayment: false,
+            PdConsent: false,
             Groups: groups || [],
             Sel: defaultSel(groups),
         };
@@ -90,6 +91,7 @@
         state.OrderPlaced = null;
         state.Submitting = false;
         state.ShowPayment = false;
+        state.PdConsent = false;
         state.Sel = defaultSel(state.Groups);
         return state;
     }
@@ -152,6 +154,7 @@
             delivery_date: state.Dates,
             delivery_time: state.Time,
             delivery_mode: 'courier',
+            pd_consent: !!state.PdConsent,
         };
         if (state.SelectedCake) {
             body.cake_id = state.SelectedCake.id;

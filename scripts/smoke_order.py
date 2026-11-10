@@ -90,6 +90,7 @@ order_body = {
     "courier_comment": "домофон 7",
     "promo_code": "",
     "spec": spec,
+    "pd_consent": True,
 }
 status, order = api("POST", "/api/orders/", order_body)
 check("POST /api/orders/ 200 + ok", status == 200 and order.get("ok") is True, order)

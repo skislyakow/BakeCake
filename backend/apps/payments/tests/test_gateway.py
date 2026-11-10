@@ -1,7 +1,13 @@
 import pytest
 
 from apps.orders.models import Order, OrderEvent
-from apps.payments.gateway import InMemoryGateway, PaymentError, handle_webhook, start_payment
+from apps.payments.gateway import (
+    InMemoryGateway,
+    PaymentError,
+    handle_webhook,
+    mark_order_paid,
+    start_payment,
+)
 from apps.payments.models import Payment
 from apps.users.models import User
 
@@ -67,6 +73,41 @@ def test_handle_webhook_marks_paid_idempotently():
     assert first is not None
     assert second is not None
     assert OrderEvent.objects.filter(order=order, kind=OrderEvent.Kind.PAID).count() == 1
+
+
+@pytest.mark.django_db
+def test_mark_order_paid_manual_fallback_without_payment():
+    order = _order()
+
+    assert mark_order_paid(order, manual=True) is True
+
+    order.refresh_from_db()
+    assert order.status == Order.Status.PAID
+    assert OrderEvent.objects.filter(
+        order=order, kind=OrderEvent.Kind.PAID, text="Оплата подтверждена вручную"
+    ).exists()
+
+
+@pytest.mark.django_db
+def test_mark_order_paid_marks_latest_payment_succeeded():
+    order = _order()
+    payment = Payment.objects.create(order=order, amount=1500, provider_id="gw_manual")
+
+    assert mark_order_paid(order, manual=True) is True
+
+    payment.refresh_from_db()
+    assert payment.status == Payment.Status.SUCCEEDED
+
+
+@pytest.mark.django_db
+def test_mark_order_paid_does_not_regress_delivered_order():
+    order = _order(status=Order.Status.DELIVERED)
+
+    assert mark_order_paid(order, manual=True) is False
+
+    order.refresh_from_db()
+    assert order.status == Order.Status.DELIVERED
+    assert OrderEvent.objects.filter(order=order, kind=OrderEvent.Kind.PAID).count() == 0
 
 
 @pytest.mark.django_db

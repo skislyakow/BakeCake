@@ -10,6 +10,7 @@ from apps.orders import intake
 from apps.orders.composition import describe
 from apps.orders.intake import OrderIntakeError
 from apps.orders.models import Issue, Order
+from apps.users.utils import request_ip
 
 
 @api_view(["POST"])
@@ -62,10 +63,6 @@ def _user_order_or_fail(request, number):
     return None, order
 
 
-def _client_ip(request):
-    return request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip() or request.META.get("REMOTE_ADDR", "")
-
-
 def _pd_version():
     return getattr(settings, "PD_VERSION", "")
 
@@ -87,7 +84,7 @@ def orders(request):
             request.session.create()
         utm_source, utm_medium, utm_campaign = _read_first_touch(request)
         ctx = intake.RequestContext(
-            ip=_client_ip(request),
+            ip=request_ip(request),
             session_key=request.session.session_key or "",
             actor=request.user if getattr(request.user, "is_authenticated", False) else None,
             attribution=(utm_source, utm_medium, utm_campaign),

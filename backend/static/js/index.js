@@ -62,7 +62,7 @@ Vue.createApp({
             Berries: null, Decor: null, Words: '', Comments: '', Promo: '',
             Name: '', Phone: '', Email: '', Address: '', Dates: '', Time: '', DelivComments: '',
             Cost: 0, Quote: null, QuoteError: '', OrderError: '', OrderPlaced: null,
-            Submitting: false, RushPercent: 20, ShowPayment: false,
+            Submitting: false, RushPercent: 20, ShowPayment: false, PdConsent: false,
             Groups: [], Sel: {},
         }, {
             schema1: schema1,
@@ -173,6 +173,10 @@ Vue.createApp({
         async SubmitOrder() {
             this.OrderError = '';
             this.OrderPlaced = null;
+            if (!this.PdConsent) {
+                this.OrderError = 'Подтвердите согласие на обработку персональных данных';
+                return;
+            }
             if (!this.Quote) await this.FetchQuote();
             if (!this.Quote) return;
 

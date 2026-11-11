@@ -4,6 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 
 from apps.orders.models import Order
+from apps.users.models import User
 
 
 def _order(status):
@@ -18,7 +19,7 @@ def _order(status):
 
 
 def _admin_client(client):
-    admin = get_user_model().objects.create_superuser(phone="+79000000099", password="admin")
+    admin = User.objects.create_superuser(phone="+79000000099", password="admin")
     client.force_login(admin)
     return client
 

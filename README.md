@@ -182,6 +182,16 @@ pip install -r requirements-dev.txt
 python -m pyright
 ```
 
+Фронтовая логика (чистые функции конфигуратора и CSRF, без браузера):
+
+```bash
+node scripts/test_frontend.js
+```
+
+Те же команды плюс `node --check` для всех `.js` запускает GitHub Actions
+(`.github/workflows/ci.yml`) на каждый push и pull request. Локально перед PR
+достаточно `pytest`, `pyright` и `node scripts/test_frontend.js`.
+
 `pyrightconfig.json` подхватывается и VS Code (Pylance). В редакторе нужно выбрать
 интерпретатор из `.venv`.
 

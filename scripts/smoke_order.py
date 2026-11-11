@@ -6,36 +6,47 @@ import json
 import re
 import sys
 from datetime import date, timedelta
+from typing import Any
 
 import requests
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://127.0.0.1:8123"
 s = requests.Session()
-failures = []
+failures: list[str] = []
 
 
-def check(name, condition, detail=""):
+def check(name: str, condition: bool, detail: object = "") -> None:
     print(("OK   " if condition else "FAIL ") + name + ("" if condition else f" -> {detail}"))
     if not condition:
         failures.append(name)
 
 
-def get_token():
+def get_token() -> str:
     page = s.get(f"{BASE}/")
     match = re.search(r'name="csrf-token" content="([^"]+)"', page.text)
     token = match.group(1) if match else s.cookies.get("csrftoken", "")
-    return token
+    return token or ""
 
 
-def api(method, path, body=None):
+def api(
+    method: str, path: str, body: dict[str, Any] | None = None
+) -> tuple[int, dict[str, Any]]:
     headers = {"Accept": "application/json", "X-CSRFToken": s.cookies.get("csrftoken", "")}
     if body is not None:
         headers["Content-Type"] = "application/json"
-    resp = s.request(method, f"{BASE}{path}", headers=headers, data=json.dumps(body) if body is not None else None)
+    resp = s.request(
+        method,
+        f"{BASE}{path}",
+        headers=headers,
+        data=json.dumps(body) if body is not None else None,
+    )
     try:
-        return resp.status_code, resp.json()
+        payload: Any = resp.json()
     except ValueError:
-        return resp.status_code, {"_raw": resp.text[:200]}
+        payload = {"_raw": resp.text[:200]}
+    if not isinstance(payload, dict):
+        payload = {"_raw": payload}
+    return resp.status_code, payload
 
 
 token = get_token()
@@ -79,7 +90,7 @@ check("пустой слот -> обе ошибки", status == 400 and bad.get(
 status, bad_format = api("POST", "/api/quote/", {"spec": spec, "delivery_date": "03.11.2026", "delivery_time": "12:00"})
 check("кривая дата -> текст про формат", status == 400 and bad_format.get("errors", {}).get("delivery_date") == "Неверный формат даты, ожидается ГГГГ-ММ-ДД", (status, bad_format))
 
-order_body = {
+order_body: dict[str, Any] = {
     "name": "Смоук Тест",
     "phone": "+7 (900) 555-11-22",
     "email": "smoke@example.com",

@@ -25,6 +25,13 @@ class Option(models.Model):
     )
     title = models.CharField("название", max_length=100)
     price_delta = models.IntegerField("доплата, ₽", default=0)
+    preview_key = models.SlugField(
+        "ключ превью",
+        max_length=40,
+        blank=True,
+        default="",
+        help_text="Как опция выглядит в предпросмотре торта, например level_2 или form_circle.",
+    )
     is_available = models.BooleanField("доступна", default=True)
     sort = models.PositiveSmallIntegerField("порядок", default=0)
 

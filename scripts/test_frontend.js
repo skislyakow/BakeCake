@@ -120,6 +120,81 @@ function testDraft() {
     assert(custom.SelectedCake === null, 'repeat custom has no cake');
 }
 
+function testPreview() {
+    const groups = [
+        { code: 'levels', title: 'Уровни', is_required: true, options: [
+            { id: 11, title: '1 уровень', price_delta: 400, preview_key: 'level_1' },
+            { id: 12, title: '2 уровня', price_delta: 750, preview_key: 'level_2' },
+            { id: 13, title: '3 уровня', price_delta: 1100, preview_key: 'level_3' },
+        ] },
+        { code: 'form', title: 'Форма', is_required: true, options: [
+            { id: 21, title: 'Круг', price_delta: 400, preview_key: 'form_circle' },
+            { id: 22, title: 'Квадрат', price_delta: 600, preview_key: 'form_square' },
+            { id: 23, title: 'Прямоугольник', price_delta: 1000, preview_key: 'form_rectangle' },
+        ] },
+        { code: 'topping', title: 'Топпинг', is_required: true, options: [
+            { id: 31, title: 'Без топпинга', price_delta: 0, preview_key: 'topping_none' },
+            { id: 32, title: 'Карамельный сироп', price_delta: 180, preview_key: 'topping_caramel' },
+        ] },
+        { code: 'berries', title: 'Ягоды', is_required: false, options: [
+            { id: 41, title: 'Малина', price_delta: 300, preview_key: 'berry_raspberry' },
+        ] },
+        { code: 'decor', title: 'Декор', is_required: false, options: [
+            { id: 51, title: 'Фисташки', price_delta: 300, preview_key: 'decor_pistachio' },
+        ] },
+    ];
+    const state = draft.createState([]);
+    draft.applyConfig(state, { groups: groups, inscription_price: 500 });
+
+    let preview = draft.previewModel(state);
+    assert(preview.levels === 1 && preview.tiers.length === 1, 'preview defaults to one tier');
+    assert(preview.form === 'circle' && preview.toppingColor === '#F6E7D6', 'preview defaults to circle without topping');
+    assert(preview.berries.length === 0 && preview.decor.length === 0, 'preview has no extras by default');
+    assert(preview.inscription === '' && preview.inscriptionY > 0, 'preview without inscription');
+    assert(!preview.label.includes('не выбрано'), 'preview label skips empty choices');
+
+    state.Sel.levels = 12;
+    state.Sel.form = 22;
+    state.Sel.topping = 32;
+    state.Sel.berries = 41;
+    state.Sel.decor = 51;
+    state.Words = 'С днём рождения и счастья';
+    preview = draft.previewModel(state);
+    assert(preview.levels === 2 && preview.tiers.length === 2, 'preview stacks two tiers');
+    assert(preview.form === 'square', 'preview follows form');
+    assert(preview.toppingColor === '#D9A05B' && preview.drips.length > 0, 'preview draws topping and drips');
+    assert(preview.berries.length === 6 && preview.decor.length === 5, 'preview adds berries and decor');
+    assert(preview.inscription.endsWith('…') && preview.inscription.length <= 18, 'preview trims long inscription');
+    assert(preview.label.includes('2 уровня') && preview.label.includes('Малина'), 'preview label describes choices');
+
+    state.Sel.levels = 13;
+    state.Sel.form = 21;
+    const tall = draft.previewModel(state);
+    assert(tall.tiers.length === 3, 'preview stacks three tiers');
+    assert(tall.inscriptionSize === 9, 'preview shrinks inscription on a narrow top tier');
+
+    state.Sel.levels = 11;
+    state.Sel.form = 23;
+    const rectangle = draft.previewModel(state);
+    assert(rectangle.tiers[0].width > preview.tiers[0].width, 'rectangle is wider than square');
+
+    // Fallback: старые опции без preview_key узнаются по названию.
+    const legacy = draft.createState([]);
+    draft.applyConfig(legacy, { groups: [
+        { code: 'levels', title: 'Уровни', is_required: true, options: [{ id: 1, title: '3 уровня', price_delta: 1100 }] },
+        { code: 'form', title: 'Форма', is_required: true, options: [{ id: 2, title: 'Круг', price_delta: 400 }] },
+        { code: 'topping', title: 'Топпинг', is_required: true, options: [{ id: 3, title: 'Шоколад', price_delta: 200 }] },
+    ] });
+    legacy.Sel = { levels: 1, form: 2, topping: 3 };
+    const legacyPreview = draft.previewModel(legacy);
+    assert(legacyPreview.levels === 3 && legacyPreview.toppingColor === '#7A4A32', 'preview falls back to option titles');
+
+    const cake = draft.createState([]);
+    cake.SelectedCake = { id: 7, name: 'Медовик', image_url: '/static/img/image1.png' };
+    const cakePreview = draft.previewModel(cake);
+    assert(cakePreview.cake === true && cakePreview.cakeImage === '/static/img/image1.png', 'preview switches to selected cake');
+}
+
 function testStorage() {
     const store = {
         value: null,
@@ -145,6 +220,7 @@ function testStorage() {
 
 testCsrfToken();
 testDraft();
+testPreview();
 testStorage();
 
 if (failed) {

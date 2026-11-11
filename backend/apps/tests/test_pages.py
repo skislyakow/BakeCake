@@ -31,6 +31,8 @@ def test_home_renders_mobile_layout_and_image_attributes(client):
     assert 'loading="lazy"' in body
     assert 'alt="Торт ручной работы"' in body
     assert "configurator-draft.js" in body
+    assert "cake__preview" in body
+    assert 'viewBox="0 0 320 300"' in body
 
 
 @pytest.mark.django_db

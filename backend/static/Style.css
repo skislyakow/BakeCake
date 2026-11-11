@@ -152,6 +152,30 @@ li .cake__textinput:read-only {
 .z-index-1 {
     z-index: -1;
 }
+/* Схематичный предпросмотр торта в конструкторе: SVG собирается из выбранных опций. */
+.cake__preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    max-width: 340px;
+    margin: 0 auto 1rem;
+}
+.cake__preview svg,
+.cake__preview img {
+    display: block;
+    width: 100%;
+    max-width: 320px;
+    height: auto;
+    filter: drop-shadow(0 10px 14px rgba(140, 153, 170, 0.18));
+}
+.cake__preview-caption {
+    margin: 0;
+    color: #8C99AA;
+    font-size: 12px;
+    line-height: 1.35;
+    text-align: center;
+}
 /* Липкая полоса конструктора на телефоне: сумма и переход к оформлению. */
 .cake__sticky {
     position: sticky;

@@ -93,6 +93,9 @@ Vue.createApp({
             // null, пока серверу нечего считать; иначе тело запроса /api/quote/.
             return BC.draft.quoteBody(this);
         },
+        Preview() {
+            return BC.draft.previewModel(this);
+        },
     },
     async mounted() {
         await Promise.all([this.LoadCatalog(), this.LoadConfig()]);

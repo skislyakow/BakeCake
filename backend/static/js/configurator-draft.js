@@ -252,16 +252,17 @@
         form_circle: 'circle',
         form_square: 'square',
         form_rectangle: 'rectangle',
+        form_star: 'star',
     };
 
     var PREVIEW_TOPPINGS = {
-        topping_none: { color: '#F6E7D6', drip: false },
-        topping_white: { color: '#FFF6EC', drip: true },
-        topping_caramel: { color: '#D9A05B', drip: true },
-        topping_maple: { color: '#C98B47', drip: true },
-        topping_strawberry: { color: '#E98A9A', drip: true },
-        topping_blueberry: { color: '#8B7BC0', drip: true },
-        topping_chocolate: { color: '#7A4A32', drip: true },
+        topping_none: { color: '#EFDCC4', drip: false, ink: '#7A4A32' },
+        topping_white: { color: '#FFF6EC', drip: true, ink: '#7A4A32' },
+        topping_caramel: { color: '#D9A05B', drip: true, ink: '#5A3A1E' },
+        topping_maple: { color: '#C98B47', drip: true, ink: '#5A3A1E' },
+        topping_strawberry: { color: '#E98A9A', drip: true, ink: '#5A2A33' },
+        topping_blueberry: { color: '#8B7BC0', drip: true, ink: '#FFF4FA' },
+        topping_chocolate: { color: '#7A4A32', drip: true, ink: '#FFF4E8' },
     };
 
     var PREVIEW_BERRIES = {
@@ -282,7 +283,13 @@
 
     var PREVIEW_FALLBACKS = {
         levels: [['1', 'level_1'], ['2', 'level_2'], ['3', 'level_3']],
-        form: [['круг', 'form_circle'], ['квадрат', 'form_square'], ['прямоуголь', 'form_rectangle']],
+        form: [
+            ['круг', 'form_circle'],
+            ['квадрат', 'form_square'],
+            ['прямоуголь', 'form_rectangle'],
+            ['звезд', 'form_star'],
+            ['звёзд', 'form_star'],
+        ],
         topping: [
             ['без', 'topping_none'],
             ['бел', 'topping_white'],
@@ -328,24 +335,70 @@
         return '';
     }
 
+    function starPoints(cx, cy, outer, inner, squash) {
+        // Пять лучей: верхний луч смотрит вверх, по вертикали звезда приплюснута.
+        var points = [];
+        for (var i = 0; i < 10; i += 1) {
+            var radius = i % 2 === 0 ? outer : inner;
+            var angle = -Math.PI / 2 + (i * Math.PI) / 5;
+            points.push(
+                Math.round(cx + radius * Math.cos(angle)) + ',' +
+                Math.round(cy + radius * squash * Math.sin(angle))
+            );
+        }
+        return points.join(' ');
+    }
+
     function buildTiers(levels, form) {
         // Снизу вверх: каждый следующий ярус уже и ниже, с небольшим зазором.
-        var widthScale = form === 'rectangle' ? 1.22 : 1;
         var tiers = [];
         var bottom = 244;
         for (var i = 0; i < levels; i += 1) {
-            var width = Math.round((190 - i * 40) * widthScale);
             var height = 64 - i * 6;
-            var y = bottom - height;
-            tiers.push({
-                x: Math.round(160 - width / 2),
-                y: y,
-                width: width,
-                height: height,
-                radius: form === 'circle' ? Math.min(26, Math.round(width * 0.14)) : 7,
-                topRy: form === 'circle' ? Math.max(8, Math.round(width * 0.09)) : 8,
-            });
-            bottom = y - 5;
+            var y;
+            if (form === 'star') {
+                // Звезда шире и ниже остальных форм, иначе лучи не читаются.
+                var starWidth = 200 - i * 38;
+                height = 80 - i * 12;
+                var outer = starWidth / 1.902;
+                var inner = outer * 0.46;
+                var squash = height / (1.809 * outer);
+                y = bottom - height;
+                var centerY = y + height / 1.809;
+                var topY = centerY - 2;
+                tiers.push({
+                    shape: 'star',
+                    x: Math.round(160 - starWidth / 2),
+                    y: y,
+                    width: starWidth,
+                    height: height,
+                    radius: 0,
+                    topRy: 0,
+                    topCenterY: Math.round(topY),
+                    inscriptionY: Math.round(centerY + 7),
+                    fitWidth: Math.round(starWidth * 0.7),
+                    points: starPoints(160, centerY, outer, inner, squash),
+                    topPoints: starPoints(160, topY, outer * 0.82, inner * 0.82, squash),
+                });
+            } else {
+                var width = Math.round((190 - i * 40) * (form === 'rectangle' ? 1.22 : 1));
+                var radius = form === 'circle' ? Math.min(28, Math.round(height / 2)) : 2;
+                var topRy = form === 'circle' ? Math.max(10, Math.round(width * 0.13)) : 5;
+                y = bottom - height;
+                tiers.push({
+                    shape: form,
+                    x: Math.round(160 - width / 2),
+                    y: y,
+                    width: width,
+                    height: height,
+                    radius: radius,
+                    topRy: topRy,
+                    topCenterY: y + topRy,
+                    inscriptionY: Math.round(y + height * 0.62 + 5),
+                    fitWidth: width,
+                });
+            }
+            bottom = tiers[tiers.length - 1].y - 5;
         }
         return tiers;
     }
@@ -368,6 +421,7 @@
                 inscription: '',
                 inscriptionY: 0,
                 inscriptionSize: 13,
+                inscriptionColor: '',
             };
         }
 
@@ -381,11 +435,12 @@
 
         var tiers = buildTiers(levels, form);
         var top = tiers[tiers.length - 1];
-        var topCenterY = top.y + top.topRy;
+        var topCenterY = top.topCenterY;
 
         var drips = [];
         if (topping.drip) {
             tiers.forEach(function (tier) {
+                if (tier.shape === 'star') return;
                 var count = 4;
                 for (var i = 0; i < count; i += 1) {
                     var r = 4 + ((i + levels) % 3) * 1.5;
@@ -432,8 +487,9 @@
         // Надпись подгоняем под ширину верхнего яруса, иначе на трёх уровнях она вылезает.
         var inscriptionSize = 13;
         if (inscription) {
-            var fit = Math.floor((top.width - 8) / Math.max(1, inscription.length * 0.58));
-            inscriptionSize = Math.max(9, Math.min(13, fit));
+            var fitWidth = top.fitWidth || top.width;
+            var fit = Math.floor((fitWidth - 8) / Math.max(1, inscription.length * 0.58));
+            inscriptionSize = Math.max(8, Math.min(13, fit));
         }
 
         var labelParts = [];
@@ -457,8 +513,9 @@
             berries: berries,
             decor: decorItems,
             inscription: inscription,
-            inscriptionY: Math.round(top.y + top.height * 0.62 + 5),
+            inscriptionY: top.inscriptionY,
             inscriptionSize: inscriptionSize,
+            inscriptionColor: topping.ink || '#7A4A32',
         };
     }
 

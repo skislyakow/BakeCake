@@ -131,6 +131,7 @@ function testPreview() {
             { id: 21, title: 'Круг', price_delta: 400, preview_key: 'form_circle' },
             { id: 22, title: 'Квадрат', price_delta: 600, preview_key: 'form_square' },
             { id: 23, title: 'Прямоугольник', price_delta: 1000, preview_key: 'form_rectangle' },
+            { id: 24, title: 'Звездочка', price_delta: 7000, preview_key: 'form_star' },
         ] },
         { code: 'topping', title: 'Топпинг', is_required: true, options: [
             { id: 31, title: 'Без топпинга', price_delta: 0, preview_key: 'topping_none' },
@@ -148,7 +149,7 @@ function testPreview() {
 
     let preview = draft.previewModel(state);
     assert(preview.levels === 1 && preview.tiers.length === 1, 'preview defaults to one tier');
-    assert(preview.form === 'circle' && preview.toppingColor === '#F6E7D6', 'preview defaults to circle without topping');
+    assert(preview.form === 'circle' && preview.toppingColor === '#EFDCC4', 'preview defaults to circle without topping');
     assert(preview.berries.length === 0 && preview.decor.length === 0, 'preview has no extras by default');
     assert(preview.inscription === '' && preview.inscriptionY > 0, 'preview without inscription');
     assert(!preview.label.includes('не выбрано'), 'preview label skips empty choices');
@@ -178,16 +179,34 @@ function testPreview() {
     const rectangle = draft.previewModel(state);
     assert(rectangle.tiers[0].width > preview.tiers[0].width, 'rectangle is wider than square');
 
+    state.Sel.form = 22;
+    const square = draft.previewModel(state);
+    state.Sel.form = 21;
+    const circle = draft.previewModel(state);
+    assert(square.tiers[0].radius === 2 && square.tiers[0].topRy === 5, 'square has sharp corners and flat top');
+    assert(circle.tiers[0].topRy > square.tiers[0].topRy, 'circle has a rounder top than square');
+    assert(circle.tiers[0].radius > square.tiers[0].radius, 'circle has softer sides than square');
+
+    state.Sel.levels = 12;
+    state.Sel.form = 24;
+    const star = draft.previewModel(state);
+    assert(star.form === 'star' && star.tiers.length === 2, 'preview draws a star');
+    assert(star.tiers[0].points.split(' ').length === 10, 'star has ten vertices');
+    assert(star.tiers[0].topPoints && star.drips.length === 0, 'star keeps topping on top without drips');
+    assert(star.berries.length === 6 && star.decor.length === 5, 'star keeps berries and decor');
+    assert(star.inscriptionY > star.tiers[1].y && star.inscriptionY < star.tiers[1].y + star.tiers[1].height, 'star inscription fits its tier');
+
     // Fallback: старые опции без preview_key узнаются по названию.
     const legacy = draft.createState([]);
     draft.applyConfig(legacy, { groups: [
         { code: 'levels', title: 'Уровни', is_required: true, options: [{ id: 1, title: '3 уровня', price_delta: 1100 }] },
-        { code: 'form', title: 'Форма', is_required: true, options: [{ id: 2, title: 'Круг', price_delta: 400 }] },
+        { code: 'form', title: 'Форма', is_required: true, options: [{ id: 2, title: 'Звездочка', price_delta: 7000 }] },
         { code: 'topping', title: 'Топпинг', is_required: true, options: [{ id: 3, title: 'Шоколад', price_delta: 200 }] },
     ] });
     legacy.Sel = { levels: 1, form: 2, topping: 3 };
     const legacyPreview = draft.previewModel(legacy);
-    assert(legacyPreview.levels === 3 && legacyPreview.toppingColor === '#7A4A32', 'preview falls back to option titles');
+    assert(legacyPreview.levels === 3 && legacyPreview.form === 'star', 'preview falls back to option titles for star');
+    assert(legacyPreview.toppingColor === '#7A4A32' && legacyPreview.inscriptionColor === '#FFF4E8', 'preview picks ink for dark topping');
 
     const cake = draft.createState([]);
     cake.SelectedCake = { id: 7, name: 'Медовик', image_url: '/static/img/image1.png' };

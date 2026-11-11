@@ -1,9 +1,10 @@
+import uuid
+
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
 from .utils import normalize_phone
-
 
 class UserManager(BaseUserManager):
     use_in_migrations = True
@@ -74,3 +75,50 @@ class Profile(models.Model):
 
     def __str__(self):
         return f"Профиль {self.user.phone}"
+
+
+class PhoneConfirm(models.Model):
+    """Ожидание подтверждения номера звонком через Звонок™.
+
+    Токен — наша тайна: он уходит провайдеру как `session_id`, а по нему
+    postback находит запись. Сессия открывается только после `confirmed`.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "ожидает"
+        CONFIRMED = "confirmed", "подтверждён"
+        REJECTED = "rejected", "отклонён"
+        EXPIRED = "expired", "истёк"
+
+    token = models.UUIDField("токен", default=uuid.uuid4, unique=True, editable=False)
+    phone = models.CharField("телефон", max_length=20, db_index=True)
+    status = models.CharField(
+        "статус", max_length=16, choices=Status.choices, default=Status.PENDING
+    )
+    attempts = models.PositiveSmallIntegerField("попыток", default=0)
+    expires_at = models.DateTimeField("истекает")
+    zvonok_id = models.CharField("ID проверки у провайдера", max_length=100, blank=True)
+    session_issued = models.BooleanField("сессия открыта", default=False)
+    created = models.DateTimeField("создано", auto_now_add=True)
+    updated = models.DateTimeField("обновлено", auto_now=True)
+
+    class Meta:
+        verbose_name = "подтверждение номера"
+        verbose_name_plural = "подтверждения номеров"
+        ordering = ["-created"]
+        indexes = [
+            models.Index(fields=["phone", "status", "expires_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.phone} ({self.get_status_display()})"  # pyright: ignore[reportAttributeAccessIssue]
+
+    def is_expired(self, now=None):
+        return self.expires_at <= (now or timezone.now())
+
+    def expire_if_needed(self, now=None):
+        if self.status == self.Status.PENDING and self.is_expired(now):
+            self.status = self.Status.EXPIRED
+            self.save(update_fields=["status", "updated"])
+            return True
+        return False

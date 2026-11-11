@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 
-from .models import Profile, User
+from .models import PhoneConfirm, Profile, User
 from .utils import normalize_phone
 
 
@@ -52,3 +52,15 @@ class ProfileAdmin(admin.ModelAdmin):
     list_filter = ("pd_version",)
     search_fields = ("user__phone", "user__name", "default_address")
     raw_id_fields = ("user",)
+
+
+@admin.register(PhoneConfirm)
+class PhoneConfirmAdmin(admin.ModelAdmin):
+    list_display = ("phone", "status", "attempts", "expires_at", "created")
+    list_filter = ("status", "created")
+    search_fields = ("phone", "token", "zvonok_id")
+    readonly_fields = [field.name for field in PhoneConfirm._meta.fields]
+    date_hierarchy = "created"
+
+    def has_add_permission(self, request):
+        return False

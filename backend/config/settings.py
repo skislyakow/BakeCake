@@ -72,6 +72,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "config.context_processors.jivosite",
+                "config.context_processors.auth_mode",
             ],
         },
     },
@@ -128,3 +129,21 @@ YOO_SHOP_ID = env.str("YOO_SHOP_ID", "")
 YOO_SECRET_KEY = env.str("YOO_SECRET_KEY", "")
 SITE_URL = env.str("SITE_URL", "https://bakecake.kislyakov.pro")
 JIVO_SITE_ID = env.str("JIVO_SITE_ID", "")
+
+AUTH_MODE = (env.str("AUTH_MODE", "demo").strip().lower() or "demo")
+if AUTH_MODE not in {"demo", "off", "call"}:
+    raise ImproperlyConfigured(
+        "AUTH_MODE must be one of: demo, off, call; got " + repr(AUTH_MODE)
+    )
+
+PHONE_CONFIRM_TTL_MINUTES = env.int("PHONE_CONFIRM_TTL_MINUTES", 5)
+PHONE_CONFIRM_MAX_PENDING = env.int("PHONE_CONFIRM_MAX_PENDING", 3)
+PHONE_CONFIRM_MAX_PER_HOUR = env.int("PHONE_CONFIRM_MAX_PER_HOUR", 10)
+PHONE_CONFIRM_MAX_ATTEMPTS = env.int("PHONE_CONFIRM_MAX_ATTEMPTS", 5)
+
+ZVONOK_API_KEY = env.str("ZVONOK_API_KEY", "")
+ZVONOK_API_SECRET = env.str("ZVONOK_API_SECRET", "")
+ZVONOK_VERIFY_URL = env.str("ZVONOK_VERIFY_URL", "")
+ZVONOK_SIGNATURE_HEADER = env.str("ZVONOK_SIGNATURE_HEADER", "X-Zvonok-Signature")
+ZVONOK_VERIFY_NUMBER = env.str("ZVONOK_VERIFY_NUMBER", "8 800 000-00-00")
+ZVONOK_TIMEOUT_SECONDS = env.int("ZVONOK_TIMEOUT_SECONDS", 10)

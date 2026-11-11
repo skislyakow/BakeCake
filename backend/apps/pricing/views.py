@@ -22,6 +22,7 @@ def configurator(request):
                     "id": option.pk,
                     "title": option.title,
                     "price_delta": option.price_delta,
+                    "preview_key": option.preview_key,
                 }
                 for option in options_by_group.get(group.pk, [])
             ],

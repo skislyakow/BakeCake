@@ -26,45 +26,58 @@ OPTION_GROUPS = [
         "code": "levels",
         "title": "Количество уровней",
         "is_required": True,
-        "options": [("1 уровень", 400), ("2 уровня", 750), ("3 уровня", 1100)],
+        "options": [
+            ("1 уровень", 400, "level_1"),
+            ("2 уровня", 750, "level_2"),
+            ("3 уровня", 1100, "level_3"),
+        ],
     },
     {
         "code": "form",
         "title": "Форма торта",
         "is_required": True,
-        "options": [("Квадрат", 600), ("Круг", 400), ("Прямоугольник", 1000)],
+        "options": [
+            ("Квадрат", 600, "form_square"),
+            ("Круг", 400, "form_circle"),
+            ("Прямоугольник", 1000, "form_rectangle"),
+        ],
     },
     {
         "code": "topping",
         "title": "Топпинг",
         "is_required": True,
         "options": [
-            ("Без топпинга", 0),
-            ("Белый соус", 200),
-            ("Карамельный сироп", 180),
-            ("Кленовый сироп", 200),
-            ("Клубничный сироп", 300),
-            ("Черничный сироп", 350),
-            ("Молочный шоколад", 200),
+            ("Без топпинга", 0, "topping_none"),
+            ("Белый соус", 200, "topping_white"),
+            ("Карамельный сироп", 180, "topping_caramel"),
+            ("Кленовый сироп", 200, "topping_maple"),
+            ("Клубничный сироп", 300, "topping_strawberry"),
+            ("Черничный сироп", 350, "topping_blueberry"),
+            ("Молочный шоколад", 200, "topping_chocolate"),
         ],
     },
     {
         "code": "berries",
         "title": "Ягоды",
         "is_required": False,
-        "options": [("Ежевика", 400), ("Малина", 300), ("Голубика", 450), ("Клубника", 500)],
+        "options": [
+            ("Ежевика", 400, "berry_blackberry"),
+            ("Малина", 300, "berry_raspberry"),
+            ("Голубика", 450, "berry_blueberry"),
+            ("Клубника", 500, "berry_strawberry"),
+        ],
     },
     {
         "code": "decor",
         "title": "Декор",
         "is_required": False,
         "options": [
-            ("Фисташки", 300),
-            ("Безе", 400),
-            ("Фундук", 350),
-            ("Пекан", 300),
-            ("Маршмеллоу", 200),
-            ("Марципан", 280),
+            ("Фисташки", 300, "decor_pistachio"),
+            ("Безе", 400, "decor_meringue"),
+            ("Фундук", 350, "decor_hazelnut"),
+            ("Пекан", 300, "decor_pecan"),
+            ("Маршмеллоу", 200, "decor_marshmallow"),
+            ("Марципан", 280, "decor_marzipan"),
         ],
     },
 ]
@@ -96,9 +109,15 @@ def seed_groups():
             code=group["code"],
             defaults={"title": group["title"], "is_required": group["is_required"], "sort": group_index},
         )
-        for option_index, (title, price) in enumerate(group["options"], start=1):
+        for option_index, (title, price, preview_key) in enumerate(group["options"], start=1):
             Option.objects.update_or_create(
-                group=obj, title=title, defaults={"price_delta": price, "sort": option_index}
+                group=obj,
+                title=title,
+                defaults={
+                    "price_delta": price,
+                    "preview_key": preview_key,
+                    "sort": option_index,
+                },
             )
     print(f"групп опций: {OptionGroup.objects.count()}, опций: {Option.objects.count()}")
 

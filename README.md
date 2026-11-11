@@ -112,6 +112,13 @@ python manage.py changepassword
 | `YOO_SHOP_ID` | нет | идентификатор магазина ЮKassa |
 | `YOO_SECRET_KEY` | нет | секретный ключ ЮKassa |
 | `JIVO_SITE_ID` | нет | идентификатор сайта для чата JivoSite |
+| `AUTH_MODE` | нет | вход на сайт: `demo` (по умолчанию), `off` или `call` |
+| `ZVONOK_API_KEY` | для `call` | публичный ключ Звонка |
+| `ZVONOK_API_SECRET` | для `call` | секрет для инициации проверки и подписи postback |
+| `ZVONOK_VERIFY_URL` | для `call` | URL метода создания проверки номера |
+| `ZVONOK_SIGNATURE_HEADER` | нет | заголовок подписи postback, по умолчанию `X-Zvonok-Signature` |
+| `ZVONOK_VERIFY_NUMBER` | для `call` | номер, который показывается клиенту |
+| `PHONE_CONFIRM_TTL_MINUTES` | нет | срок жизни токена подтверждения, по умолчанию 5 минут |
 
 `DEBUG` понимает привычные варианты значений: `true`/`false`, `True`/`False`,
 `TRUE`/`FALSE`, `1`/`0`, `yes`/`no`. Регистр не важен. Если переменная не задана,
@@ -129,6 +136,8 @@ API построен на DRF. Авторизация — сессия в cookie
 |---|---|---|
 | `POST` | `/api/auth/login/` | вход по номеру телефона |
 | `POST` | `/api/auth/logout/` | выход |
+| `POST` | `/api/auth/verify/postback/` | postback Звонка (только при `AUTH_MODE=call`) |
+| `GET` | `/api/auth/verify/status/?token=...` | статус подтверждения и открытие сессии |
 | `GET`, `PATCH` | `/api/me/` | профиль пользователя |
 | `GET` | `/api/configurator/` | группы и опции конструктора |
 | `GET` | `/api/catalog/` | готовые торты |

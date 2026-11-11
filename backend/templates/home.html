@@ -106,8 +106,14 @@
 					<svg v-else viewBox="0 0 320 300" role="img" :aria-label="Preview.label">
 						<ellipse cx="160" cy="252" rx="118" ry="14" fill="#EFE5DC" opacity="0.9"></ellipse>
 						<g v-for="(tier, ti) in Preview.tiers" :key="'tier-' + ti">
-							<rect :x="tier.x" :y="tier.y" :width="tier.width" :height="tier.height" :rx="tier.radius" :fill="Preview.bodyColor"></rect>
-							<ellipse cx="160" :cy="tier.y" :rx="tier.width / 2" :ry="tier.topRy" :fill="Preview.toppingColor"></ellipse>
+							<g v-if="tier.shape === 'star'">
+								<polygon :points="tier.points" :fill="Preview.bodyColor"></polygon>
+								<polygon :points="tier.topPoints" :fill="Preview.toppingColor"></polygon>
+							</g>
+							<g v-else>
+								<rect :x="tier.x" :y="tier.y" :width="tier.width" :height="tier.height" :rx="tier.radius" :fill="Preview.bodyColor"></rect>
+								<ellipse cx="160" :cy="tier.y" :rx="tier.width / 2" :ry="tier.topRy" :fill="Preview.toppingColor"></ellipse>
+							</g>
 						</g>
 						<circle v-for="(drip, di) in Preview.drips" :key="'drip-' + di" :cx="drip.cx" :cy="drip.cy" :r="drip.r" :fill="drip.fill"></circle>
 						<g v-for="(berry, bi) in Preview.berries" :key="'berry-' + bi">
@@ -115,7 +121,7 @@
 							<ellipse v-if="berry.leaf" :cx="berry.cx + 2" :cy="berry.cy - berry.r" rx="3" ry="1.8" fill="#6F8F5A" :transform="'rotate(-25 ' + (berry.cx + 2) + ' ' + (berry.cy - berry.r) + ')'"></ellipse>
 						</g>
 						<ellipse v-for="(item, ii) in Preview.decor" :key="'decor-' + ii" :cx="item.cx" :cy="item.cy" :rx="item.rx" :ry="item.ry" :fill="item.fill" :transform="'rotate(' + item.rotate + ' ' + item.cx + ' ' + item.cy + ')'"></ellipse>
-						<text v-if="Preview.inscription" x="160" :y="Preview.inscriptionY" text-anchor="middle" :font-size="Preview.inscriptionSize" fill="#7A4A32" font-family="Arial, sans-serif">{{ Preview.inscription }}</text>
+						<text v-if="Preview.inscription" x="160" :y="Preview.inscriptionY" text-anchor="middle" :font-size="Preview.inscriptionSize" :fill="Preview.inscriptionColor" font-family="Arial, sans-serif">{{ Preview.inscription }}</text>
 					</svg>
 					<p class="cake__preview-caption">{{ Preview.label }}</p>
 				</div>
@@ -276,6 +282,6 @@
 </main>
 {% endblock %}
 {% block scripts %}
-<script src="{% static 'js/configurator-draft.js' %}?v=20261114"></script>
+<script src="{% static 'js/configurator-draft.js' %}?v=20261115"></script>
 <script src="{% static 'js/index.js' %}?v=20261114"></script>
 {% endblock %}

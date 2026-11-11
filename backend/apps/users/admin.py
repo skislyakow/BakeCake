@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.forms import UserChangeForm, UserCreationForm
@@ -10,6 +12,8 @@ class _NormalizePhoneFormMixin:
     """Админка проверяет уникальность до `save()`, поэтому номер приводим здесь:
     иначе дубль в другом формате пройдёт валидацию и упадёт на unique-индексе.
     """
+
+    cleaned_data: dict[str, Any]
 
     def clean_phone(self):
         return normalize_phone(self.cleaned_data.get("phone"))

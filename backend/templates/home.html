@@ -12,7 +12,7 @@
 			<div class="col-12 col-xxl-6 d-flex flex-column justify-content-center align-items-center align-items-xxl-start">
 				<h1 class="font_Gogh fs_40 cake_blue">Создайте торт своей мечты</h1>
 				<span class="cake_grey fw-lighter">Уникальность и красота в пару кликов</span>
-				<a href="#step3" class="btn text-white rounded-pill px-5 mt-3 shadow-none cake__button cake__bg_pink">Создать</a>
+				<a href="#step3" @click="ClearCake" class="btn text-white rounded-pill px-5 mt-3 shadow-none cake__button cake__bg_pink">Создать</a>
 			</div>
 			<div class="position-fixed bottom-0 m-5 w-auto end-0">
 				<div class="d-flex">
@@ -92,12 +92,12 @@
 				<p class="cake_grey mt-3">Готовый заказ доставят по адресу в заявке с 10:00 до 23:00 в пределах МКАД</p>
 			</div>
 			<div class="d-flex justify-content-center">
-				<a href="#step3" class="btn text-white rounded-pill mt-3 shadow-none cake__button cake__bg_pink">Оформить заказ</a>
+				<a :href="SelectedCake ? '#step4' : '#step3'" class="btn text-white rounded-pill mt-3 shadow-none cake__button cake__bg_pink">Оформить заказ</a>
 			</div>
 		</article>
 
 		<article>
-			<section class="row pt-header" id="step3">
+			<section class="row pt-header" id="step3" v-if="!SelectedCake">
 				<h2 class="font_Gogh fs_40 cake_blue text-center">Создать свой торт</h2>
 				<p v-if="ConfigError" class="cake_pink text-center">{% verbatim %}{{ ConfigError }}{% endverbatim %}</p>
 				{% verbatim %}
@@ -283,5 +283,5 @@
 {% endblock %}
 {% block scripts %}
 <script src="{% static 'js/configurator-draft.js' %}?v=20261115"></script>
-<script src="{% static 'js/index.js' %}?v=20261114"></script>
+<script src="{% static 'js/index.js' %}?v=20261115"></script>
 {% endblock %}

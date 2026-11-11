@@ -98,11 +98,15 @@ Vue.createApp({
         },
     },
     async mounted() {
+        window.addEventListener('hashchange', this.OnHashChange);
         await Promise.all([this.LoadCatalog(), this.LoadConfig()]);
         this.ApplyRepeat();
         this.ApplyCakeLink();
         await this.LoadProfile();
         this.Hydrated = true;
+    },
+    beforeUnmount() {
+        window.removeEventListener('hashchange', this.OnHashChange);
     },
     watch: {
         Name() {
@@ -132,6 +136,13 @@ Vue.createApp({
         ScrollTo(id) {
             const section = document.getElementById(id);
             if (section) section.scrollIntoView();
+        },
+        OnHashChange() {
+            // Готовый торт прячет конструктор: ссылка «Создать торт» из меню
+            // должна вернуть пользователя к сборке своего торта.
+            if (location.hash === '#step3' && this.SelectedCake) {
+                this.ClearCake();
+            }
         },
         ApplyRepeat() {
             // «Повторить заказ» из «Мои заказы» кладёт spec прошлого заказа в sessionStorage.

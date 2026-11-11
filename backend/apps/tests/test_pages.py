@@ -3,6 +3,7 @@
 Проверки сквозные — они не принадлежат одному приложению, поэтому лежат в
 `apps/tests`, а не в тестах заказов или пользователей.
 """
+import re
 from datetime import date, time
 
 import pytest
@@ -33,6 +34,11 @@ def test_home_renders_mobile_layout_and_image_attributes(client):
     assert "configurator-draft.js" in body
     assert "cake__preview" in body
     assert 'viewBox="0 0 320 300"' in body
+    # Готовый торт из каталога прячет конструктор, чтобы не путать пользователя.
+    step3 = re.search(r'<section[^>]*id="step3"[^>]*>', body)
+    assert step3 and 'v-if="!SelectedCake"' in step3.group(0)
+    assert 'SelectedCake ? \'#step4\' : \'#step3\'' in body
+    assert '@click="ClearCake"' in body
 
 
 @pytest.mark.django_db

@@ -11,6 +11,18 @@ global.document = {
 require(path.join(__dirname, '..', 'backend', 'static', 'js', 'api.js'));
 require(path.join(__dirname, '..', 'backend', 'static', 'js', 'configurator-draft.js'));
 
+// Компонент приложения: перехватываем опции у Vue, чтобы проверить
+// hash-навигацию без браузера.
+let appOptions = null;
+global.Vue = {
+    createApp: function (options) {
+        appOptions = options;
+        return { mount: function () {} };
+    },
+};
+global.VeeValidate = { Form: {}, Field: {}, ErrorMessage: {} };
+require(path.join(__dirname, '..', 'backend', 'static', 'js', 'index.js'));
+
 const draft = global.BC.draft;
 let failed = 0;
 
@@ -237,10 +249,36 @@ function testStorage() {
     assert(state.Designed === false && state.PdConsent === false && state.Words === '', 'resetState очищает заказ');
 }
 
+function testHashGuard() {
+    const handler = appOptions.methods.OnHashChange;
+    const app = {
+        SelectedCake: { id: 1 },
+        cleared: 0,
+        ClearCake: function () { this.cleared += 1; },
+    };
+    const originalLocation = global.location;
+
+    global.location = { hash: '#step3' };
+    handler.call(app);
+    assert(app.cleared === 1, 'ссылка #step3 сбрасывает готовый торт');
+
+    app.SelectedCake = null;
+    handler.call(app);
+    assert(app.cleared === 1, '#step3 не трогает конструктор без торта');
+
+    global.location = { hash: '#step2' };
+    app.SelectedCake = { id: 2 };
+    handler.call(app);
+    assert(app.cleared === 1, '#step2 не мешает выбранному торту');
+
+    global.location = originalLocation;
+}
+
 testCsrfToken();
 testDraft();
 testPreview();
 testStorage();
+testHashGuard();
 
 if (failed) {
     console.error('\nПРОВАЛЕНО: ' + failed);

@@ -109,7 +109,7 @@ BakeCake закрывает весь путь заказа торта: посе�
 | Backend | Python 3.12, Django 5.2, Django REST Framework, SQLite |
 | Frontend | Django templates, Bootstrap 5, Vue 3, VeeValidate, vanilla JS |
 | Платежи | ЮKassa SDK |
-| Инфраструктура | gunicorn, nginx, systemd, Let's Encrypt |
+| Инфраструктура | uv, gunicorn, nginx, systemd, Let's Encrypt |
 | Качество | pytest, pyright, `node --check`, GitHub Actions |
 
 Vue 3 и VeeValidate подключаются с CDN, поэтому фронтенд не требует сборки:
@@ -141,29 +141,20 @@ docs/                скриншоты для README
 
 ## Запуск локально
 
-Создай виртуальное окружение и активируй его:
+Установи [uv](https://docs.astral.sh/uv/getting-started/installation/) — он сам
+скачает Python 3.12 и поставит зависимости из `uv.lock`.
+
+Скопируй шаблон настроек и создай окружение:
 
 ```bash
-python -m venv .venv
-
-# Windows (PowerShell)
-.venv\Scripts\Activate.ps1
-
-# Linux / macOS
-source .venv/bin/activate
-```
-
-Установи зависимости и создай локальный файл настроек:
-
-```bash
-pip install -r requirements.txt
 cp .env.example .env
+uv sync
 ```
 
 `SECRET_KEY` обязателен: без него проект не запустится. Сгенерируй ключ:
 
 ```bash
-python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+uv run python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
 ```
 
 Полученную строку вставь в `.env` в строку `SECRET_KEY=`. Значение лучше взять в
@@ -173,9 +164,9 @@ python -c "from django.core.management.utils import get_random_secret_key; print
 
 ```bash
 cd backend
-python manage.py migrate
-python ../scripts/seed_demo.py
-python manage.py runserver
+uv run python manage.py migrate
+uv run python ../scripts/seed_demo.py
+uv run python manage.py runserver
 ```
 
 Сайт откроется на <http://127.0.0.1:8000/>.
@@ -268,16 +259,15 @@ API построен на DRF. Авторизация — сессия в cookie
 
 ```bash
 cd backend
-python manage.py check
-python manage.py makemigrations --check --dry-run
-python -m pytest
+uv run python manage.py check
+uv run python manage.py makemigrations --check --dry-run
+uv run python -m pytest
 ```
 
 Проверка типов и фронтовые тесты:
 
 ```bash
-pip install -r requirements-dev.txt
-python -m pyright
+uv run pyright
 node scripts/test_frontend.js
 ```
 
@@ -294,10 +284,10 @@ node scripts/test_frontend.js
 ssh vds 'git clone https://github.com/skislyakow/BakeCake.git /opt/bakecake && /opt/bakecake/deploy/install.sh'
 ```
 
-`install.sh` создаёт виртуальное окружение, генерирует `.env` со свежим
-`SECRET_KEY`, ставит systemd-сервисы и nginx, выпускает сертификат Let's Encrypt
-и включает таймер автодеплоя. Повторный запуск безопасен: существующий `.env` не
-перезаписывается.
+`install.sh` ставит uv, создаёт окружение по `uv.lock` и ставит зависимости
+сервера, генерирует `.env` со свежим `SECRET_KEY`, ставит systemd-сервисы и nginx,
+выпускает сертификат Let's Encrypt и включает таймер автодеплоя. Повторный запуск
+безопасен: существующий `.env` не перезаписывается.
 
 После установки деплой автоматический: таймер каждые 3 минуты проверяет
 `origin/main` и при появлении нового коммита запускает `deploy/deploy.sh`

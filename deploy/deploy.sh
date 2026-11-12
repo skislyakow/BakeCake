@@ -25,8 +25,12 @@ fi
 echo "=== git pull ==="
 git pull --ff-only origin main
 
-echo "=== pip install ==="
-"$VENV/bin/pip" install -q -r requirements-server.txt
+echo "=== uv sync ==="
+if [ ! -x /usr/local/bin/uv ]; then
+  echo "uv not found at /usr/local/bin/uv; run deploy/install.sh first" >&2
+  exit 1
+fi
+/usr/local/bin/uv sync --locked --no-dev --group server
 
 cd "$APP_DIR/backend"
 echo "=== collectstatic ==="

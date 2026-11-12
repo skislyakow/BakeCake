@@ -17,20 +17,24 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.13.7"
+          enable-cache: true
 
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: uv sync --locked
 
       - name: Django checks
         working-directory: backend
         run: |
-          python manage.py check
-          python manage.py makemigrations --check --dry-run --noinput
+          uv run --locked python manage.py check
+          uv run --locked python manage.py makemigrations --check --dry-run --noinput
 
       - name: Pytest
         working-directory: backend
-        run: python -m pytest -q
+        run: uv run --locked python -m pytest -q
 
       - uses: actions/setup-node@v4
         with:
@@ -46,4 +50,4 @@ jobs:
         run: node scripts/test_frontend.js
 
       - name: Pyright
-        run: pyright
+        run: uv run --locked pyright

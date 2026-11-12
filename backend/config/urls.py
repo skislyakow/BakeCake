@@ -10,6 +10,10 @@ from apps.pricing import views as pricing_views
 from apps.users import views as user_views
 from config import pages
 
+admin.site.site_header = "CakeBake"
+admin.site.site_title = "CakeBake — админка"
+admin.site.index_title = "Сводка"
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("", TemplateView.as_view(template_name="home.html"), name="home"),

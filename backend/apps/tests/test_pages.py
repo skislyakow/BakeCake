@@ -65,9 +65,14 @@ def test_admin_index_renders_mobile_styles(client):
     client.force_login(_superuser())
 
     resp = client.get("/admin/")
+    body = resp.content.decode()
 
     assert resp.status_code == 200
-    assert "admin/css/mobile.css" in resp.content.decode()
+    assert "admin/css/mobile.css" in body
+    assert "admin/css/site_theme.css" in body
+    assert "admin-brand__badge" in body
+    assert "img/Logo.svg" in body
+    assert "Сводка" in body
 
 
 @pytest.mark.django_db
@@ -81,9 +86,11 @@ def test_admin_order_change_renders_mobile_styles(client):
     )
 
     resp = client.get(f"/admin/orders/order/{order.pk}/change/")
+    body = resp.content.decode()
 
     assert resp.status_code == 200
-    assert "admin/css/mobile.css" in resp.content.decode()
+    assert "admin/css/mobile.css" in body
+    assert "admin/css/site_theme.css" in body
 
 
 @pytest.mark.django_db

@@ -4,7 +4,7 @@
 
 **Тортики на заказ: конструктор с живым предпросмотром, онлайн-оплата, личный кабинет и админка.**
 
-[Демо-версия](https://bakecake.kislyakov.pro/) · [Админка](https://bakecake.kislyakov.pro/admin/) · [Инструкция для заказчика](docs/CLIENT_GUIDE.md)
+[Демо-версия](https://bakecake.kislyakov.pro/) · [Админка](https://bakecake.kislyakov.pro/admin/)
 
 [![CI](https://github.com/skislyakow/BakeCake/actions/workflows/ci.yml/badge.svg?branch=main&style=flat-square)](https://github.com/skislyakow/BakeCake/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
@@ -132,7 +132,7 @@ backend/
 └── static/          CSS, JS, шрифты и изображения
 deploy/              установка, деплой, systemd и nginx
 scripts/             seed_demo.py, smoke_order.py, test_frontend.js
-docs/                инструкция заказчика и скриншоты
+docs/                скриншоты для README
 ```
 
 Клиент присылает только идентификаторы выбранных опций. Сервер проверяет состав,
@@ -329,7 +329,6 @@ tail -f /var/log/bakecake/error.log
 
 ## Документация
 
-- [Инструкция для заказчика](docs/CLIENT_GUIDE.md) — как вести заказы в админке.
 - [Скриншоты](docs/screenshots/) — исходные PNG для этой страницы.
 - [`.agents/`](.agents/README.md) — внутренние материалы: техническое задание,
   архитектурные решения, история изменений и задачи. Для запуска и использования

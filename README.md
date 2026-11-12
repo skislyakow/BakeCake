@@ -267,6 +267,7 @@ uv run python -m pytest
 Проверка типов и фронтовые тесты:
 
 ```bash
+cd ..              # pyright и фронтовые тесты запускаются из корня
 uv run pyright
 node scripts/test_frontend.js
 ```

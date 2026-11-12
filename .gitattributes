@@ -7,6 +7,9 @@
 *.timer text eol=lf
 *.conf text eol=lf
 
+# uv пишет lock с LF; CRLF на Windows заставляет его перезаписывать файл.
+uv.lock text eol=lf
+
 # Шрифты и картинки из макета: git не должен пытаться их нормализовать.
 *.png binary
 *.otf binary

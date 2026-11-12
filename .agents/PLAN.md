@@ -73,7 +73,8 @@
 - **Телефон:** `place_order` берёт номер из заявки, иначе из `context.actor` (залогиненный покупатель), и валидирует его до расчёта цены — ошибка `{"phone": ...}` приходит раньше ошибок состава, как в старом view.
 - **Провода:** URL, JSON-ключи, формат `{ok, errors}`, HTTP-статусы, `payment_url=""` заморожены. Невалидный/неактивный `cake_id` -> расчёт по `spec`, как сейчас. Числовой телефон в JSON (`89001234567`) принимается как раньше.
 - **Миграция:** двухшаговый strangler. Шаг 1 — `price_order` + HTTP-characterization тесты для quote/orders; оба view используют модуль. Шаг 2 — `place_order`, перенос создания заказа.
-- **Тесты:** `pytest` + `pytest-django` + `pytest-env` в `requirements-dev.txt`, конфиг `backend/pytest.ini`. Сначала characterization (`tests/test_orders_char.py`), потом интерфейсные (`tests/test_intake_interface.py`). `SECRET_KEY` в тестах задаётся отдельно. Часы в тестах на срочность подменяются через `monkeypatch`, чтобы не зависеть от времени запуска.
+- **Тесты:** `pytest` + `pytest-django` + `pytest-env` в группе `dev`
+  (`pyproject.toml` + `uv.lock`), конфиг `backend/pytest.ini`. Сначала characterization (`tests/test_orders_char.py`), потом интерфейсные (`tests/test_intake_interface.py`). `SECRET_KEY` в тестах задаётся отдельно. Часы в тестах на срочность подменяются через `monkeypatch`, чтобы не зависеть от времени запуска.
 - **Вне скоупа:** платежи, аналитика/выручка, `users.identify_customer` (сейчас приватный хелпер), другие кандидаты аудита.
 - **Ревью (05.11.2026):** после двухосевого ревью вернули точный порядок и тексты ошибок слота доставки, проверку прошедшей даты привязали к `now`, `place_order` стал единственным местом проверки телефона, `parse_rules` переехал из `draft.py` в `pricing.py`, а characterization-тест на срочность снова проверяет `is_rush`/`rush_amount` (с подменой часов). Правки типов вне intake (`admin.py`, `pricing/views.py`, `users/*`) — только чтобы `python -m pyright` был зелёным.
 
@@ -343,8 +344,9 @@ bakecake/
 ├── .agents/
 │   ├── README.md               # как пользоваться документацией для разработки
 │   └── PLAN.md                 # этот файл — первоисточник по всем решениям
-├── requirements.txt            # Django 5, DRF, environs
-├── requirements-dev.txt        # django-stubs, pyright — только проверка типов
+├── pyproject.toml              # зависимости, группы dev и server, настройки uv
+├── uv.lock                     # зафиксированные версии всех зависимостей
+├── .python-version             # Python 3.12 для uv
 ├── pyrightconfig.json          # настройки pyright/Pylance
 ├── .env.example                # SECRET_KEY, DEBUG, ALLOWED_HOSTS, SHOP_PHONE, YOO_*, SITE_URL, JIVO_SITE_ID
 ├── .gitignore                  # .env, *.sqlite3, __pycache__, *.pyc, media/, .venv/
@@ -1045,7 +1047,7 @@ target = sqlite3.connect(sys.argv[1])
 source.backup(target)
 PY
 git pull --ff-only origin main
-.venv/bin/pip install -q -r requirements-server.txt
+/usr/local/bin/uv sync --locked --no-dev --group server
 cd /opt/bakecake/backend
 ../.venv/bin/python manage.py collectstatic --noinput
 ../.venv/bin/python manage.py migrate --noinput
@@ -1058,8 +1060,7 @@ systemctl restart bakecake
 короткое имя юнита в `systemctl restart`:
 
 - `git pull --ff-only origin main` вместо голого `git pull`;
-- `requirements-server.txt` вместо `requirements.txt` — gunicorn не нужен на
-  локальной машине;
+- группа `server` в `pyproject.toml` — gunicorn не нужен на локальной машине;
 - бэкап БД, которого у соседа нет;
 - **certbot в деплой не входит**: сертификат продлевает `certbot-renewal.timer`,
   звать `certbot renew` на каждом пуше — лишняя сетевая зависимость;
@@ -1862,3 +1863,4 @@ API отвечают `{"ok": true, ...}`. Витрины не было — он�
 | 12.11.2026 | **Админка переведена на дизайн витрины.** Раньше это была стандартная синяя админка Django, которая выбивалась из бренда CakeBake. Добавлена тема `backend/static/admin/css/site_theme.css`: палитра сайта (розовый `#DA87A9`, синий `#5882CD`, серый `#8C99AA`, кремовый `#FBF7F3`/`#EFE5DC`), шрифты Gogh/Garet, скругления 15px, мягкие тени, кнопки-пилюли, карточки модулей, фильтры, таблицы, сообщения и карточка входа. Тёмная тема Django принудительно отключена, переключатель скрыт. Брендинг в `admin/base_site.html` теперь логотип `img/Logo.svg` с бейджем «админка», заголовки сайта заданы в `config/urls.py`, дашборд называется «Сводка». Инлайн-стили дашборда перенесены в тему, `dashboard.css` грузится раньше неё. Покрыто проверками `test_pages` на подключение темы и брендинга. Проверено headless-Chrome на dashboard, списке заказов, карточке заказа и входе: шрифты загружены, радиусы и цвета применяются, горизонтального переполнения нет на десктопе и мобильном. `pytest` — 115, pyright — 0, frontend-тесты зелёные |
 | 12.11.2026 | **Публичный README переписан под демонстрацию, скриншоты сняты с работающего приложения.** Корневой `README.md` теперь открывается бейджами (CI, Python 3.12, Django 5.2, DRF 3.17, SQLite, Bootstrap 5, Vue 3, YooKassa, 115 тестов, Devman), ссылками на демо и админку и галереей из пяти PNG; дальше — возможности по блокам, стек, архитектура, локальный запуск, демо-доступ, API, настройки, проверки, деплой и ограничения. Внутренние материалы остались в `.agents/`, README не описывает процесс разработки. Снимки `docs/screenshots/{home,configurator,checkout,admin-dashboard,admin-orders}.png` сделаны headless Chrome с локального Django dev-сервера на демо-БД: Vue монтируется заново, API отвечает локально, поэтому на кадре реальные данные, а не статический снимок продакшена. Админка снимается с сессией, которую выставляет bootstrap-страница из Django test client. Headless Chrome отдаёт пустой кадр после `scrollTo`, поэтому секции конструктора и оформления сняты в окне `1440×3600` без прокрутки и вырезаны Pillow по координатам `#step3`/`#step4`. Проверены все локальные ссылки и картинки README и доступность всех badge-URL (HTTP 200); `pytest` — 115, pyright — 0, frontend-тесты зелёные |
 | 12.11.2026 | **`docs/CLIENT_GUIDE.md` удалён: показательному проекту отдельная инструкция заказчику не нужна.** Документ дублировал README и объяснял то, что и так видно в админке, а поддерживать его в учебном проекте смысла нет. Из README убраны ссылка в шапке, упоминание в дереве репозитория и пункт в разделе «Документация»; `docs/` теперь содержит только `screenshots/`. Упоминания в актуальных разделах плана тоже убраны. |
+| 12.11.2026 | **Проект переведён с pip/venv на uv — локально и на сервере.** `requirements.txt`, `requirements-dev.txt` и `requirements-server.txt` заменены на `pyproject.toml` + `uv.lock`: один файл зависимостей и один lock вместо трёх списков, которые расходились по версиям. Runtime-зависимости зафиксированы точно: Django 5.2.17, DRF 3.17.2, environs 15.2.0, yookassa 3.13.0. Группа `dev` — django-stubs 6.1.1, pyright 1.1.414, pytest 8.3.4, pytest-django 4.9.0, pytest-env 1.1.5, requests 2.34.2; группа `server` — gunicorn 26.0.0. `package = false` (это приложение, а не библиотека), `.python-version` фиксирует Python 3.12, `required-version = ">=0.13.0"`. Lock собран uv 0.13.7. В CI `actions/setup-python` остался, добавлен `astral-sh/setup-uv@v10` с кешем; установка — `uv sync --locked`, все команды — `uv run --locked`, поэтому CI и локальная машина используют один и тот же lock. `deploy/install.sh` ставит uv в `/usr/local/bin` (`UV_INSTALL_DIR`, `UV_NO_MODIFY_PATH`, без правки PATH) и синхронизирует окружение; `deploy/deploy.sh` вместо `pip install -r` вызывает `uv sync --locked --no-dev --group server` и падает с понятным сообщением, если uv не установлен. Путь `/opt/bakecake/.venv` не меняется, поэтому `deploy/bakecake.service` и автодеплой не трогали. Локальный `.venv` пересоздан uv. Проверено: `pytest` — 115, pyright — 0, `node scripts/test_frontend.js` — зелёный; серверный набор в отдельном окружении ставит 19 пакетов на CPython 3.12.3, gunicorn на месте, pytest и dev-зависимостей нет; dry-run на сервере подтвердил тот же набор. |

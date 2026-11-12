@@ -1,0 +1,28 @@
+[project]
+name = "bakecake"
+version = "0.1.0"
+description = "BakeCake — демонстрационный магазин тортов на заказ"
+requires-python = ">=3.12"
+dependencies = [
+    "django==5.2.17",
+    "djangorestframework==3.17.2",
+    "environs==15.2.0",
+    "yookassa==3.13.0",
+]
+
+[dependency-groups]
+dev = [
+    "django-stubs==6.1.1",
+    "pyright==1.1.414",
+    "pytest==8.3.4",
+    "pytest-django==4.9.0",
+    "pytest-env==1.1.5",
+    "requests==2.34.2",
+]
+server = [
+    "gunicorn==26.0.0",
+]
+
+[tool.uv]
+package = false
+required-version = ">=0.13.0"

@@ -8,7 +8,7 @@ NGINX_SITE=/etc/nginx/sites-available/$DOMAIN
 
 echo "=== 1. системные пакеты ==="
 missing=0
-for pkg in nginx python3-venv python3-pip certbot python3-certbot-nginx; do
+for pkg in curl ca-certificates nginx python3-venv certbot python3-certbot-nginx; do
   if ! dpkg -s "$pkg" >/dev/null 2>&1; then
     echo "  installing $pkg"
     missing=1
@@ -17,7 +17,7 @@ done
 if [ "$missing" -eq 1 ]; then
   apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-    nginx python3-venv python3-pip certbot python3-certbot-nginx
+    curl ca-certificates nginx python3-venv certbot python3-certbot-nginx
 fi
 
 echo "=== 2. каталоги ==="
@@ -30,10 +30,12 @@ else
   git clone "$REPO" "$APP_DIR"
 fi
 
-echo "=== 4. venv и зависимости ==="
-python3 -m venv "$APP_DIR/.venv"
-"$APP_DIR/.venv/bin/pip" install -q --upgrade pip
-"$APP_DIR/.venv/bin/pip" install -q -r "$APP_DIR/requirements-server.txt"
+echo "=== 4. uv, venv и зависимости ==="
+if [ ! -x /usr/local/bin/uv ]; then
+  curl -LsSf https://astral.sh/uv/install.sh | \
+    env UV_INSTALL_DIR=/usr/local/bin UV_NO_MODIFY_PATH=1 sh
+fi
+(cd "$APP_DIR" && /usr/local/bin/uv sync --locked --no-dev --group server)
 
 echo "=== 5. .env ==="
 if [ ! -f "$APP_DIR/.env" ]; then

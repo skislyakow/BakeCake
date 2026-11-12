@@ -34,7 +34,7 @@ Vue.createApp({
     },
     methods: {
         HandleReturn() {
-            // возврат с оплаты: открыть карточку заказа и дождаться вебхука (план, раздел 7)
+            // возврат с оплаты: открыть карточку заказа и дождаться вебхука
             const number = new URLSearchParams(location.search).get('order')
             if (!number) return
             const el = document.getElementById('OrderModal' + number)

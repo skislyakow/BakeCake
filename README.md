@@ -4,7 +4,7 @@
 
 **Тортики на заказ: конструктор с живым предпросмотром, онлайн-оплата, личный кабинет и админка.**
 
-[Демо-версия](https://bakecake.kislyakov.pro/) · [Админка](https://bakecake.kislyakov.pro/admin/)
+[Сайт](https://bakecake.kislyakov.pro/) · [Админка](https://bakecake.kislyakov.pro/admin/)
 
 [![CI](https://github.com/skislyakow/BakeCake/actions/workflows/ci.yml/badge.svg?branch=main&style=flat-square)](https://github.com/skislyakow/BakeCake/actions/workflows/ci.yml)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
@@ -314,3 +314,7 @@ tail -f /var/log/bakecake/error.log
   остаётся доступен в личном кабинете и админке.
 - Проект использует SQLite. Для демо и небольшой нагрузки этого достаточно, при
   росте стоит перейти на PostgreSQL.
+
+## Лицензия
+
+Код открыт по лицензии [MIT](LICENSE).

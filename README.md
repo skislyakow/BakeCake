@@ -15,9 +15,6 @@
 [![Vue 3](https://img.shields.io/badge/Vue-3-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)](https://vuejs.org/)
 [![YooKassa](https://img.shields.io/badge/YooKassa-online%20payments-8B3FFD?style=flat-square)](https://yookassa.ru/)
 [![tests](https://img.shields.io/badge/tests-115-brightgreen?style=flat-square)](https://github.com/skislyakow/BakeCake/actions/workflows/ci.yml)
-[![Devman](https://img.shields.io/badge/Devman-course%20project-2E86AB?style=flat-square)](https://devman.org/)
-
-<sub>Командный проект на курсе Devman</sub>
 
 </div>
 

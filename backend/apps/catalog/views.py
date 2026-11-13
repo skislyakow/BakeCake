@@ -7,7 +7,6 @@ from .models import Cake
 
 @api_view(["GET"])
 def catalog(request):
-    """Каталог готовых тортов: только активные, сортировка по поводу и порядку."""
     cakes = (
         Cake.objects.filter(is_active=True)
         .order_by("occasion", "sort", "id")

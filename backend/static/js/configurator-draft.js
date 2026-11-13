@@ -1,5 +1,3 @@
-// Черновик конфигуратора: чистая логика без DOM/сети.
-// Компонент Vue в index.js остаётся тонкой привязкой к DOM, таймерам и api().
 (function (global) {
     var REPEAT_KEY = 'bc_repeat';
 
@@ -101,7 +99,6 @@
         return now.getFullYear() + '-' + month + '-' + day;
     }
 
-    // Поля и префиксы id повторяют вёрстку: levels → lvls / num, остальные = code.
     function mapGroup(group) {
         return Object.assign({}, group, {
             required: !!group.is_required,
@@ -154,8 +151,6 @@
     }
 
     function quoteBody(state) {
-        // null, пока серверу нечего считать: нужны дата и время, а для своего
-        // торта — ещё и все обязательные группы.
         if (!state.Dates || !state.Time) return null;
         if (state.SelectedCake) {
             return {
@@ -230,7 +225,6 @@
         state.QuoteError = '';
         var cakeId = typeof item.cake === 'number' ? item.cake : item.cake_id;
         if (typeof cakeId === 'number') {
-            // Готовый торт: Order.spec хранит {"cake": id}.
             var cake = (state.Catalog || []).find(function (c) { return c.id === cakeId; }) || null;
             if (cake) {
                 state.SelectedCake = cake;
@@ -238,8 +232,7 @@
             }
             return state;
         }
-        // Свой торт: в spec лежат коды групп и надпись. Опция могла исчезнуть —
-        // тогда группу не трогаем.
+
         (state.Groups || []).forEach(function (g) {
             var option = (g.options || []).find(function (o) { return o.id === item[g.code]; });
             if (option) state.Sel[g.code] = option.id;
@@ -322,7 +315,6 @@
     }
 
     function previewKey(state, code) {
-        // preview_key из БД главный; названия — запасной путь для старых данных.
         var option = selectedOption(state, code);
         if (!option) return '';
         var key = trimStr(option.preview_key);
@@ -336,7 +328,6 @@
     }
 
     function starPoints(cx, cy, outer, inner, squash) {
-        // Пять лучей: верхний луч смотрит вверх, по вертикали звезда приплюснута.
         var points = [];
         for (var i = 0; i < 10; i += 1) {
             var radius = i % 2 === 0 ? outer : inner;
@@ -350,14 +341,12 @@
     }
 
     function buildTiers(levels, form) {
-        // Снизу вверх: каждый следующий ярус уже и ниже, с небольшим зазором.
         var tiers = [];
         var bottom = 244;
         for (var i = 0; i < levels; i += 1) {
             var height = 64 - i * 6;
             var y;
             if (form === 'star') {
-                // Звезда шире и ниже остальных форм, иначе лучи не читаются.
                 var starWidth = 200 - i * 38;
                 height = 80 - i * 12;
                 var outer = starWidth / 1.902;
@@ -484,7 +473,6 @@
         var inscription = trimStr(state.Words);
         if (inscription.length > 18) inscription = inscription.slice(0, 17).trim() + '…';
 
-        // Надпись подгоняем под ширину верхнего яруса, иначе на трёх уровнях она вылезает.
         var inscriptionSize = 13;
         if (inscription) {
             var fitWidth = top.fitWidth || top.width;

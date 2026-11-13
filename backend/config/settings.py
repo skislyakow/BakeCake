@@ -23,11 +23,9 @@ if not SECRET_KEY.strip():
 
 
 def env_bool(name: str, default: bool = False) -> bool:
-    """Treat an empty environment variable as unset, otherwise parse it strictly."""
     if not env.str(name, "").strip():
         return default
     return env.bool(name)
-
 
 DEBUG = env_bool("DEBUG")
 ALLOWED_HOSTS = [
@@ -89,7 +87,6 @@ DATABASES = {
 
 def enable_wal(sender, connection, **kwargs):
     connection.cursor().execute("PRAGMA journal_mode=WAL;")
-
 
 connection_created.connect(enable_wal)
 AUTH_USER_MODEL = "users.User"

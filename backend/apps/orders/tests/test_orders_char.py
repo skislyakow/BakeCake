@@ -27,7 +27,6 @@ def _spec(g):
 
 @pytest.fixture
 def fixed_now(monkeypatch):
-    """Замораживает часы, чтобы срочность и даты в тестах были предсказуемы."""
     moment = timezone.make_aware(datetime(2026, 5, 4, 9, 0))
     monkeypatch.setattr(timezone, "now", lambda: moment)
     return moment

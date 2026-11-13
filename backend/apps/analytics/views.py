@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
 
 from config.responses import ok
-from apps.analytics import stats as stats_helpers
+from apps.analytics.reporting import build_stats, format_hhmm, parse_date
 from apps.analytics.models import Visit
 from apps.orders.models import Order
 
@@ -90,8 +90,8 @@ def track_visit(request):
 
 def _date_params(request):
     return (
-        stats_helpers.parse_date(request.GET.get("from")),
-        stats_helpers.parse_date(request.GET.get("to")),
+        parse_date(request.GET.get("from")),
+        parse_date(request.GET.get("to")),
         request.GET.get("utm_source") or None,
     )
 
@@ -100,7 +100,7 @@ def _date_params(request):
 @permission_classes([IsAdminUser])
 def admin_stats(request):
     from_date, to_date, utm_source = _date_params(request)
-    data = stats_helpers.build_stats(from_date, to_date, utm_source)
+    data = build_stats(from_date, to_date, utm_source)
     return ok(
         orders=data["orders"],
         revenue=data["revenue"],
@@ -147,7 +147,7 @@ def export_orders_csv(request):
                 order.number,
                 order.get_status_display(),  # pyright: ignore[reportAttributeAccessIssue]
                 order.delivery_date.isoformat(),
-                stats_helpers.format_hhmm(order.delivery_time),
+                format_hhmm(order.delivery_time),
                 order.total,
                 "да" if order.is_rush else "нет",
                 order.user.phone,
@@ -164,7 +164,7 @@ def export_orders_csv(request):
 @permission_classes([IsAdminUser])
 def export_stats_csv(request):
     from_date, to_date, utm_source = _date_params(request)
-    data = stats_helpers.build_stats(from_date, to_date, utm_source)
+    data = build_stats(from_date, to_date, utm_source)
     rows = [
         [
             channel["source"],

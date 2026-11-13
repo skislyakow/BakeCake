@@ -257,7 +257,6 @@ def verify_postback(request):
         records = records.filter(phone=phone)
     record = records.order_by("-created").first()
     if record is None:
-        # Повторный postback или неизвестный токен: подтверждение уже не нужно.
         return _json({"ok": True})
 
     if record.expire_if_needed():

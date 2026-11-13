@@ -18,6 +18,5 @@ def normalize_phone(value):
 
 
 def request_ip(request):
-    """IP клиента с учётом прокси; пустая строка, если заголовков нет."""
     forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
     return forwarded or request.META.get("REMOTE_ADDR", "")

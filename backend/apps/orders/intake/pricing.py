@@ -28,7 +28,6 @@ SPEC_ERROR = "Ожидается объект вида {код группы: id 
 
 
 def parse_rules() -> PricingRules:
-    """Собирает правила расчёта из настроек проекта."""
     return PricingRules(
         delivery_from=time.fromisoformat(settings.DELIVERY_FROM),
         delivery_to=time.fromisoformat(settings.DELIVERY_TO),
@@ -39,7 +38,6 @@ def parse_rules() -> PricingRules:
 
 
 def _spec_items(spec: dict[str, Any], inscription_price: int) -> list[dict[str, Any]]:
-    """Считает позиции заказа по выбранным опциям. Raises OrderIntakeError."""
     groups = {group.code: group for group in OptionGroup.objects.all()}
 
     items: list[dict[str, Any]] = []
@@ -88,12 +86,11 @@ def _selection(
     spec_raw: dict[str, Any],
     inscription_price: int,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    """Возвращает позиции заказа и spec, который нужно сохранить в заказе."""
     if isinstance(selection, CakeChoice):
         cake = Cake.objects.filter(pk=selection.cake_id, is_active=True).first()
         if cake is not None:
             return [{"title": cake.name, "price": cake.price, "cake": cake.pk}], {"cake": cake.pk}
-        # preserve behavior: unknown/inactive cake_id falls back to the spec path
+
         spec = _clean_spec(spec_raw)
         return _spec_items(spec, inscription_price), spec
 
@@ -174,7 +171,6 @@ def _price(draft: OrderDraft, rules: PricingRules, now: datetime) -> tuple[Quote
 
 
 def price_order(draft: OrderDraft, rules: PricingRules | None = None, now: datetime | None = None) -> Quote:
-    """Считает стоимость заказа без побочных эффектов."""
     quote, _ = _price(draft, rules or parse_rules(), now or timezone.now())
     return quote
 
@@ -184,7 +180,6 @@ def place_order(
     context: RequestContext,
     rules: PricingRules | None = None,
 ) -> PlacedOrder:
-    """Считает заказ и сохраняет его вместе с покупателем и событием в одной транзакции."""
     now = context.now or timezone.now()
 
     phone = normalize_phone(draft.phone) or normalize_phone(getattr(context.actor, "phone", "") or "")

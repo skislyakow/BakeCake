@@ -4,7 +4,7 @@ from datetime import timezone as dt_timezone
 import pytest
 
 from apps.analytics.models import Visit
-from apps.analytics.stats import build_stats
+from apps.analytics.reporting import build_stats
 from apps.analytics.templatetags.links import campaign_link_rows
 from apps.orders.models import Order
 from apps.users.models import User
@@ -71,7 +71,6 @@ def test_build_stats_labels_direct_and_filters():
 
 @pytest.mark.django_db
 def test_campaign_link_rows_uses_paid_revenue_definition():
-    # Единое определение выручки: оплаченные/выполненные заказы.
     user = _user()
     _order(user, status=Order.Status.PAID, total=1000, utm_source="ig", utm_campaign="spring")
     _order(user, status=Order.Status.NEW, total=9999, utm_source="ig", utm_campaign="spring")

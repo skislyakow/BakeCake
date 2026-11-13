@@ -39,7 +39,6 @@ def test_manager_create_user_normalizes_phone():
 
 @pytest.mark.django_db
 def test_objects_create_normalizes_phone():
-    # `objects.create()` не идёт через `_create_user`, поэтому это отдельный рубеж.
     user = User.objects.create(phone="8 (909) 000-00-00")
 
     assert user.phone == CANONICAL
@@ -112,4 +111,4 @@ def test_admin_add_form_blocks_duplicate_in_another_format(client):
 
     assert resp.status_code == 200
     assert not User.objects.filter(name="Дубль").exists()
-    assert User.objects.count() == 2  # администратор + существующий покупатель
+    assert User.objects.count() == 2

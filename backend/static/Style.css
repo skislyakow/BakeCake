@@ -152,7 +152,7 @@ li .cake__textinput:read-only {
 .z-index-1 {
     z-index: -1;
 }
-/* Схематичный предпросмотр торта в конструкторе: SVG собирается из выбранных опций. */
+
 .cake__preview {
     display: flex;
     flex-direction: column;
@@ -176,7 +176,7 @@ li .cake__textinput:read-only {
     line-height: 1.35;
     text-align: center;
 }
-/* Липкая полоса конструктора на телефоне: сумма и переход к оформлению. */
+
 .cake__sticky {
     position: sticky;
     top: calc(58px + 1.5rem);
@@ -198,7 +198,6 @@ li .cake__textinput:read-only {
     }
 }
 @media (max-width: 575.98px) {
-    /* Конструктор в одну колонку: название группы сверху, допы во всю ширину. */
     .cake__group {
         flex-direction: column;
         align-items: stretch !important;

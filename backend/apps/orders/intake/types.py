@@ -16,7 +16,6 @@ class CakeChoice:
 class CustomChoice:
     spec: dict[str, Any]
 
-
 OrderSelection = CakeChoice | CustomChoice
 
 

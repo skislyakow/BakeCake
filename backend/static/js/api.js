@@ -1,7 +1,4 @@
-// Общий помощник для обращений к API. Формат ответа — {ok, errors|error, ...}.
 function csrfToken() {
-    // Вход (в т.ч. при оформлении заказа гостем) ротирует CSRF-токен, поэтому
-    // сначала берём актуальное значение из cookie, а meta — только как запасной.
     const match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
     if (match) return decodeURIComponent(match[1]);
     const meta = document.querySelector('meta[name="csrf-token"]');
@@ -30,14 +27,12 @@ async function api(url, method = 'GET', body = null) {
     }
 }
 
-// Первое сообщение об ошибке из ответа API — для показа пользователю.
 function firstError(data) {
     if (!data) return 'Что-то пошло не так, попробуйте ещё раз';
     const errors = data.errors ? Object.values(data.errors) : [];
     return errors[0] || data.error || 'Что-то пошло не так, попробуйте ещё раз';
 }
 
-// Единые правила валидации форм. Валидатор VeeValidate возвращает true или текст ошибки.
 const BC = window.BC || {};
 BC.api = api;
 BC.csrfToken = csrfToken;

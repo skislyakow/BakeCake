@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 @api_view(["POST"])
 def create_payment(request, order_id):
-    """Создать платёж и вернуть ссылку на оплату (или повторный pending-платёж)."""
     if not request.user.is_authenticated:
         return fail({"auth": "Не авторизован"}, status=http_status.HTTP_401_UNAUTHORIZED)
 
@@ -33,7 +32,6 @@ def create_payment(request, order_id):
 
 @csrf_exempt
 def webhook(request):
-    """Уведомление от платёжной системы о смене статуса платежа."""
     if request.method != "POST":
         return _json_response({"error": "POST required"}, status=400)
     try:

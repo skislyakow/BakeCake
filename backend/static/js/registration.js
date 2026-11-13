@@ -87,7 +87,7 @@ Vue.createApp({
             this.StopPolling()
             this.Step = 'Finish'
             this.RegInput = 'Регистрация успешна'
-            // перезагрузка: шапка рисуется на сервере, а csrf-токен меняется при входе
+
             setTimeout(() => window.location.reload(), 800)
         },
         StartCall(data) {

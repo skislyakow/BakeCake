@@ -292,6 +292,5 @@ def main():
     seed_visits(user)
     print("Готово.")
 
-
 if __name__ == "__main__":
     main()

@@ -90,7 +90,6 @@ Vue.createApp({
             return BC.draft.previewCost(this);
         },
         QuoteBody() {
-            // null, пока серверу нечего считать; иначе тело запроса /api/quote/.
             return BC.draft.quoteBody(this);
         },
         Preview() {
@@ -138,14 +137,11 @@ Vue.createApp({
             if (section) section.scrollIntoView();
         },
         OnHashChange() {
-            // Готовый торт прячет конструктор: ссылка «Создать торт» из меню
-            // должна вернуть пользователя к сборке своего торта.
             if (location.hash === '#step3' && this.SelectedCake) {
                 this.ClearCake();
             }
         },
         ApplyRepeat() {
-            // «Повторить заказ» из «Мои заказы» кладёт spec прошлого заказа в sessionStorage.
             var item = BC.draft.readRepeat(sessionStorage);
             if (!item) return;
             BC.draft.clearRepeat(sessionStorage);
@@ -189,7 +185,6 @@ Vue.createApp({
             this.$nextTick(() => this.ScrollTo('step3'));
         },
         async LoadProfile() {
-            // Вошедшему подставляем данные профиля; гостю оставляем поля пустыми.
             const me = await api('/api/me/');
             if (!me.ok) return;
             this.Authed = true;
@@ -226,7 +221,7 @@ Vue.createApp({
         async RequestQuote(body) {
             const ticket = (this.QuoteTicket = (this.QuoteTicket || 0) + 1);
             const data = await api('/api/quote/', 'POST', body);
-            if (ticket !== this.QuoteTicket) return; // пока шёл запрос, выбор уже поменялся
+            if (ticket !== this.QuoteTicket) return;
             if (data.ok) {
                 this.Quote = data;
             } else {
@@ -261,7 +256,7 @@ Vue.createApp({
                         return;
                     }
                 }
-                // Платёж не создался — заказ уже принят, покажем его в «Моих заказах».
+
                 window.location.href = '/orders/?order=' + encodeURIComponent(data.number);
             } finally {
                 this.Submitting = false;

@@ -1,5 +1,3 @@
-// Трекинг визитов: при загрузке страницы считывает UTM-метки из URL
-// и отправляет POST /api/track/visit/.
 (function () {
     if (window.__bcTrackDone) return;
     window.__bcTrackDone = true;
@@ -25,6 +23,5 @@
         },
         body: JSON.stringify(body)
     }).catch(function () {
-        // трекинг не критичен — молча прощаем ошибки сети
     });
 })();

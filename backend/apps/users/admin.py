@@ -9,10 +9,6 @@ from .utils import normalize_phone
 
 
 class _NormalizePhoneFormMixin:
-    """Админка проверяет уникальность до `save()`, поэтому номер приводим здесь:
-    иначе дубль в другом формате пройдёт валидацию и упадёт на unique-индексе.
-    """
-
     cleaned_data: dict[str, Any]
 
     def clean_phone(self):

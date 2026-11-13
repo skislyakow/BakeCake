@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from .utils import normalize_phone
 
+
 class UserManager(BaseUserManager):
     use_in_migrations = True
 
@@ -53,8 +54,6 @@ class User(AbstractBaseUser, PermissionsMixin):
         ordering = ["-date_joined"]
 
     def save(self, *args, **kwargs):
-        # Последний рубеж: даже `User.objects.create()` и правка в админке не
-        # должны класть в базу номер в чужом формате.
         self.phone = normalize_phone(self.phone)
         super().save(*args, **kwargs)
 
@@ -78,12 +77,6 @@ class Profile(models.Model):
 
 
 class PhoneConfirm(models.Model):
-    """Ожидание подтверждения номера звонком через Звонок™.
-
-    Токен — наша тайна: он уходит провайдеру как `session_id`, а по нему
-    postback находит запись. Сессия открывается только после `confirmed`.
-    """
-
     class Status(models.TextChoices):
         PENDING = "pending", "ожидает"
         CONFIRMED = "confirmed", "подтверждён"

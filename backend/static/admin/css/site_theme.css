@@ -1,9 +1,3 @@
-/*
-    Тема админки CakeBake.
-    Повторяет витрину: кремовый фон, розовые и синие акценты, скругления 15px,
-    шрифты Gogh/Garet. Тема всегда светлая — тёмный режим Django отключён.
-*/
-
 @font-face {
     font-family: Gogh;
     src: url("../../fonts/Gogh-ExtraBold.otf") format("opentype");
@@ -16,8 +10,6 @@
     font-display: swap;
 }
 
-/* Переменные Django admin. Значения повторены для auto/light/dark,
-   чтобы тёмная схема ОС и сохранённый выбор не перекрашивали админку. */
 :root,
 html[data-theme="auto"],
 html[data-theme="light"],
@@ -157,8 +149,6 @@ body {
     background: rgba(218, 135, 169, 0.25);
 }
 
-/* Шапка и брендинг */
-
 #header {
     padding: 14px 32px;
     background: var(--header-bg);
@@ -255,8 +245,6 @@ body {
     display: none !important;
 }
 
-/* Хлебные крошки */
-
 div.breadcrumbs {
     padding: 10px 32px;
     background: var(--breadcrumbs-bg);
@@ -273,8 +261,6 @@ div.breadcrumbs a:hover {
     color: var(--link-hover-color);
     text-decoration: none;
 }
-
-/* Контент и заголовки */
 
 #content {
     padding: 28px 32px 48px;
@@ -307,8 +293,6 @@ a:focus,
 a:hover {
     color: var(--link-hover-color);
 }
-
-/* Карточки и таблицы */
 
 .module {
     margin-bottom: 20px;
@@ -377,8 +361,6 @@ tbody tr.selected,
 #changelist tbody tr.selected {
     background: var(--selected-row);
 }
-
-/* Кнопки и ссылки действий */
 
 .button,
 input[type="submit"],
@@ -471,8 +453,6 @@ a.button:focus-visible {
     border-radius: 999px;
 }
 
-/* Поля ввода */
-
 input:not([type]),
 input[type="text"],
 input[type="password"],
@@ -547,8 +527,6 @@ fieldset.collapsed h2 {
     color: var(--body-fg);
     border-radius: 10px;
 }
-
-/* Фильтры и поиск */
 
 #toolbar {
     padding: 0 0 16px;
@@ -632,8 +610,6 @@ fieldset.collapsed h2 {
     color: #ffffff;
 }
 
-/* Список объектов: кнопка «Добавить» */
-
 .object-tools {
     margin-top: -52px;
 }
@@ -660,8 +636,6 @@ fieldset.collapsed h2 {
 .object-tools a.addlink {
     padding-right: 30px;
 }
-
-/* Сообщения */
 
 .messagelist {
     margin: 0 0 20px;
@@ -697,8 +671,6 @@ fieldset.collapsed h2 {
 ul.errorlist {
     border-radius: 12px;
 }
-
-/* Боковая навигация */
 
 .toggle-nav-sidebar {
     border-right: 1px solid var(--hairline-color);
@@ -756,8 +728,6 @@ ul.errorlist {
 #nav-sidebar .current-model a:visited {
     color: var(--link-selected-fg);
 }
-
-/* Дашборд */
 
 .dashboard #content {
     width: auto;
@@ -858,8 +828,6 @@ table.dash-recent th {
     margin-bottom: 16px;
 }
 
-/* Вход в админку */
-
 .login {
     background:
         radial-gradient(circle at 15% 15%, rgba(218, 135, 169, 0.16), transparent 45%),
@@ -940,8 +908,6 @@ table.dash-recent th {
     color: var(--body-quiet-color);
     font-size: 12px;
 }
-
-/* Адаптивность */
 
 @media (max-width: 1024px) {
     #header {

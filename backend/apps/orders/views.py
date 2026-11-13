@@ -9,7 +9,7 @@ from apps.analytics.views import _read_first_touch
 from apps.orders import intake
 from apps.orders.composition import describe
 from apps.orders.intake import OrderIntakeError
-from apps.orders.models import Issue, Order
+from apps.orders.models import Issue
 from apps.users.utils import request_ip
 
 

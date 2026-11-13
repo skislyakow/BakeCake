@@ -1,5 +1,3 @@
-"""Единый модуль отчётности: даты, каналы, статусы оплаты, экспортные строки."""
-
 from __future__ import annotations
 
 from datetime import date, datetime, time
@@ -12,7 +10,6 @@ from apps.analytics.models import Visit
 from apps.orders.models import Order
 
 REVENUE_STATUSES = [Order.Status.PAID, Order.Status.DELIVERED]
-PAID_STATUSES = REVENUE_STATUSES  # совместимость
 DIRECT_LABEL = "прямой"
 
 
@@ -126,7 +123,6 @@ def build_stats(
 
 
 def build_report(from_date: Optional[date] = None, to_date: Optional[date] = None, utm_source: Optional[str] = None):
-    """Основной интерфейс отчёта (каналы, дни, сводные метрики)."""
     return build_stats(from_date, to_date, utm_source)
 
 

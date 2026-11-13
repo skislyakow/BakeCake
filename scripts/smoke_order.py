@@ -1,7 +1,3 @@
-"""Живой смоук приёмки заказа: повторяет запросы фронтенда по HTTP.
-
-Запуск: python scripts/smoke_order.py http://127.0.0.1:8123
-"""
 import json
 import re
 import sys
@@ -47,7 +43,6 @@ def api(
     if not isinstance(payload, dict):
         payload = {"_raw": payload}
     return resp.status_code, payload
-
 
 token = get_token()
 check("страница отдаёт csrf-token", bool(token))

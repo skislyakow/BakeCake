@@ -1,9 +1,3 @@
-"""Жизненный цикл оплаты за seam'ом провайдера.
-
-Провайдер создаёт платёж у платёжной системы; состояние заказа и Payment
-меняется здесь, одинаково для YooKassa и тестового адаптера.
-"""
-
 from __future__ import annotations
 
 import logging
@@ -74,8 +68,6 @@ class YooKassaGateway:
 
 
 class InMemoryGateway:
-    """Тестовый провайдер: не ходит в сеть, возвращает предсказуемую ссылку."""
-
     configured = True
 
     def __init__(self, fail: bool = False):
@@ -100,7 +92,6 @@ def default_gateway() -> PaymentGateway:
 
 
 def start_payment(order: Order, *, return_url: str, gateway: PaymentGateway | None = None) -> Payment:
-    """Создаёт или переиспользует pending-платёж и возвращает его со ссылкой на оплату."""
     gateway = gateway or default_gateway()
 
     if order.status != Order.Status.NEW:
@@ -133,7 +124,6 @@ def start_payment(order: Order, *, return_url: str, gateway: PaymentGateway | No
 
 
 def mark_paid(payment: Payment, *, event_text: str = "Оплата получена") -> None:
-    """Отмечает платёж и заказ оплаченными. Идемпотентно."""
     with transaction.atomic():
         payment = Payment.objects.select_related("order").get(pk=payment.pk)
         if payment.status != Payment.Status.SUCCEEDED:
@@ -148,11 +138,6 @@ def mark_paid(payment: Payment, *, event_text: str = "Оплата получе�
 
 
 def mark_order_paid(order: Order, *, manual: bool = False) -> bool:
-    """Резерв на случай потерянного вебхука: переводит `new → paid` вручную.
-
-    Возвращает `False`, если заказ уже оплачен или выполнен: переход не
-    откатывает статус назад.
-    """
     event_text = "Оплата подтверждена вручную" if manual else "Оплата получена"
     with transaction.atomic():
         order = Order.objects.get(pk=order.pk)
@@ -170,7 +155,6 @@ def mark_order_paid(order: Order, *, manual: bool = False) -> bool:
 
 
 def handle_webhook(payload: dict[str, Any]) -> Payment | None:
-    """Применяет уведомление провайдера. Возвращает найденный платёж, если он был."""
     obj = payload.get("object") if isinstance(payload, dict) else {}
     if not isinstance(obj, dict):
         return None

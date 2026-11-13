@@ -13,7 +13,6 @@ Vue.createApp({
             Phone: '',
             Email: '',
             Schema: {
-                // пустые имя и почта допустимы: после входа по телефону профиль создаётся без них
                 name_format: BC.rules.name('⚠ Недопустимые символы в имени', {allowSpaces: true}),
                 email_format: BC.rules.email('⚠ Формат почты нарушен')
             }
@@ -22,7 +21,7 @@ Vue.createApp({
     async mounted() {
         const me = await api('/api/me/')
         if (!me.ok) {
-            window.location.href = '/'  // сессия закончилась
+            window.location.href = '/'
             return
         }
         this.Name = me.name || ''

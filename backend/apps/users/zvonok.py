@@ -1,12 +1,3 @@
-"""Подтверждение номера звонком через Звонок™.
-
-Провайдер работает по postback: мы инициируем проверку, человек звонит на
-служебный номер, а Звонок присылает результат на наш URL. Точные имена полей
-и схема подписи в публичной документации недоступны без аккаунта, поэтому
-адаптер намеренно собран из настроек и разбирает несколько разумных вариантов
-имён. Перед включением `AUTH_MODE=call` на проде эти места нужно сверить с
-кабинетом Звонка.
-"""
 import hashlib
 import hmac
 import json
@@ -21,11 +12,11 @@ SIGNATURE_PREFIX = "sha256="
 
 
 class ZvonokError(Exception):
-    """Провайдер недоступен или ответил ошибкой."""
+    pass
 
 
 class ZvonokNotConfigured(ZvonokError):
-    """Нет ключей/URL — режим `call` включать нельзя."""
+    pass
 
 
 def is_configured() -> bool:
@@ -49,7 +40,6 @@ def _require_settings() -> tuple[str, str, str]:
 
 
 def start_verification(*, phone: str, session_id: str) -> str:
-    """Создаёт проверку у провайдера и возвращает его ID (если он есть)."""
     api_key, api_secret, verify_url = _require_settings()
     payload = {
         "phone": phone,
@@ -87,14 +77,12 @@ def start_verification(*, phone: str, session_id: str) -> str:
 
 
 def signature_for(raw_body: bytes) -> str:
-    """HMAC-SHA256 тела запроса; сравнение — только `hmac.compare_digest`."""
     secret = getattr(settings, "ZVONOK_API_SECRET", "")
     digest = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
     return SIGNATURE_PREFIX + digest
 
 
 def verify_signature(raw_body: bytes, header_value: str) -> bool:
-    """Проверяет подпись postback, не давая подделать подтверждение номера."""
     if not getattr(settings, "ZVONOK_API_SECRET", "") or not header_value:
         return False
     expected = signature_for(raw_body)

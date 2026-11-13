@@ -44,7 +44,6 @@ def _as_bool(value: Any) -> bool:
 
 
 def parse_draft(payload: dict[str, Any] | None) -> OrderDraft:
-    """Переводит тело запроса в типизированный черновик заказа (без обращения к БД)."""
     payload = payload or {}
     spec = payload.get("spec")
     spec_raw: dict[str, Any] = spec if isinstance(spec, dict) else {}

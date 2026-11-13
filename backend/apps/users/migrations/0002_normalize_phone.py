@@ -6,11 +6,6 @@ _DIGITS_RE = re.compile(r"\D")
 
 
 def normalize_phone(value):
-    """Копия `apps.users.utils.normalize_phone` внутри миграции.
-
-    Миграция должна оставаться самодостаточной: правки живой утилиты не должны
-    менять то, что она сделает на старой базе.
-    """
     if not value:
         return ""
     raw = str(value).strip()
@@ -63,7 +58,6 @@ def merge_duplicate_phones(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("users", "0001_initial"),
         ("orders", "0003_initial"),

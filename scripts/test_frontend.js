@@ -1,5 +1,3 @@
-// Юнит-проверки чистой фронтовой логики без браузера.
-// Запуск: node scripts/test_frontend.js
 const path = require('path');
 
 global.window = global;
@@ -11,8 +9,6 @@ global.document = {
 require(path.join(__dirname, '..', 'backend', 'static', 'js', 'api.js'));
 require(path.join(__dirname, '..', 'backend', 'static', 'js', 'configurator-draft.js'));
 
-// Компонент приложения: перехватываем опции у Vue, чтобы проверить
-// hash-навигацию без браузера.
 let appOptions = null;
 global.Vue = {
     createApp: function (options) {
@@ -208,7 +204,6 @@ function testPreview() {
     assert(star.berries.length === 6 && star.decor.length === 5, 'star keeps berries and decor');
     assert(star.inscriptionY > star.tiers[1].y && star.inscriptionY < star.tiers[1].y + star.tiers[1].height, 'star inscription fits its tier');
 
-    // Fallback: старые опции без preview_key узнаются по названию.
     const legacy = draft.createState([]);
     draft.applyConfig(legacy, { groups: [
         { code: 'levels', title: 'Уровни', is_required: true, options: [{ id: 1, title: '3 уровня', price_delta: 1100 }] },

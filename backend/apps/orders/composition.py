@@ -1,10 +1,3 @@
-"""Единое представление состава заказа.
-
-`Order.spec` хранит черновик для повтора заказа, `price_items` — зафиксированные
-позиции и цены. Этот модуль читает обе колонки и отдаёт один набор фактов для API,
-админки и повтора.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -33,7 +26,6 @@ class Composition:
     labels: list[str]
     items: list[dict[str, Any]]
     admin_lines: list[AdminLine]
-
 
 _GROUP_LABELS = {
     "levels": "Количество уровней",
